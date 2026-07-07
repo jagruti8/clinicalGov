@@ -82,6 +82,24 @@ START → query_constructor → retriever → relevance_checker
 
 ## Docker
 
+The easiest way to run without any local setup:
+
+```bash
+# Pull from Docker Hub
+docker pull jagruti8/clinicalgov:latest
+
+# Ask a question
+docker run -e GROQ_API_KEY=your_key -e GEMINI_API_KEY=your_key jagruti8/clinicalgov "What phase 3 trials are recruiting for type 2 diabetes?"
+
+# Interactive mode
+docker run -it -e GROQ_API_KEY=your_key -e GEMINI_API_KEY=your_key jagruti8/clinicalgov
+
+# Persist ChromaDB across runs
+docker run -v $(pwd)/chroma_db:/app/chroma_db -e GROQ_API_KEY=your_key -e GEMINI_API_KEY=your_key jagruti8/clinicalgov "your question"
+```
+
+Or build locally:
+
 ```bash
 docker compose up --build
 ```
