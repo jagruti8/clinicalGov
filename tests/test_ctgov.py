@@ -1,3 +1,4 @@
+import json
 from unittest.mock import MagicMock, patch
 
 from src.retrieval.ctgov_client import build_query_params, fetch_trials, format_trial_text
@@ -19,7 +20,7 @@ def test_build_query_params_minimal():
     assert params["query.cond"] == "diabetes"
     assert params["format"] == "json"
     assert params["pageSize"] == 15
-    assert "filter.phase" not in params
+    assert "aggFilters" not in params
 
 
 def test_build_query_params_full():
@@ -29,8 +30,9 @@ def test_build_query_params_full():
     )
     assert params["query.cond"] == "diabetes"
     assert params["query.intr"] == "metformin"
-    assert params["filter.phase"] == "PHASE3"
-    assert params["filter.overallStatus"] == "RECRUITING"
+    assert "aggFilters" in params
+    assert "phase:3" in params["aggFilters"]
+    assert "status:rec" in params["aggFilters"]
 
 
 def test_format_trial_text_contains_key_fields():
@@ -47,10 +49,10 @@ def test_format_trial_text_truncates_eligibility():
     assert len(text) < 2000
 
 
-@patch("src.retrieval.ctgov_client.httpx.Client")
-def test_fetch_trials_parses_response(mock_client):
-    mock_response = MagicMock()
-    mock_response.json.return_value = {
+@patch("src.retrieval.ctgov_client.urllib.request.urlopen")
+def test_fetch_trials_parses_response(mock_urlopen):
+    mock_resp = MagicMock()
+    mock_resp.read.return_value = json.dumps({
         "studies": [{
             "protocolSection": {
                 "identificationModule": {"nctId": "NCT12345678", "briefTitle": "Test"},
@@ -62,8 +64,8 @@ def test_fetch_trials_parses_response(mock_client):
                 "armsInterventionsModule": {"interventions": [{"name": "Metformin"}]},
             }
         }]
-    }
-    mock_client.return_value.__enter__.return_value.get.return_value = mock_response
+    }).encode()
+    mock_urlopen.return_value.__enter__.return_value = mock_resp
 
     trials = fetch_trials({"query.cond": "diabetes"})
     assert len(trials) == 1
@@ -71,13 +73,13 @@ def test_fetch_trials_parses_response(mock_client):
     assert trials[0]["interventions"] == ["Metformin"]
 
 
-@patch("src.retrieval.ctgov_client.httpx.Client")
-def test_fetch_trials_skips_missing_nct_id(mock_client):
-    mock_response = MagicMock()
-    mock_response.json.return_value = {
+@patch("src.retrieval.ctgov_client.urllib.request.urlopen")
+def test_fetch_trials_skips_missing_nct_id(mock_urlopen):
+    mock_resp = MagicMock()
+    mock_resp.read.return_value = json.dumps({
         "studies": [{"protocolSection": {"identificationModule": {}}}]
-    }
-    mock_client.return_value.__enter__.return_value.get.return_value = mock_response
+    }).encode()
+    mock_urlopen.return_value.__enter__.return_value = mock_resp
 
     trials = fetch_trials({"query.cond": "diabetes"})
     assert trials == []

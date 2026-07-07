@@ -19,6 +19,7 @@ def test_run_judge_returns_default_on_parse_error():
 
     with patch("src.evaluation.judge.JUDGE_PROMPT") as mock_prompt:
         mock_chain = MagicMock()
+        mock_chain.__or__ = MagicMock(return_value=mock_chain)
         mock_chain.invoke.return_value = "not valid json {{}"
         mock_prompt.__or__ = MagicMock(return_value=mock_chain)
 
@@ -34,6 +35,7 @@ def test_run_judge_parses_valid_json():
 
     with patch("src.evaluation.judge.JUDGE_PROMPT") as mock_prompt:
         mock_chain = MagicMock()
+        mock_chain.__or__ = MagicMock(return_value=mock_chain)
         mock_chain.invoke.return_value = valid_json
         mock_prompt.__or__ = MagicMock(return_value=mock_chain)
 
