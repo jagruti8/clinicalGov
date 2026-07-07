@@ -1,0 +1,13 @@
+version: "3.8"
+
+services:
+  app:
+    build: .
+    env_file: .env
+    volumes:
+      - chroma_data:/app/chroma_db
+    stdin_open: true
+    tty: true
+
+volumes:
+  chroma_data:
