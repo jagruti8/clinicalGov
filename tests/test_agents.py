@@ -215,3 +215,59 @@ def test_low_agreement_shows_all_perspectives(make_deps):
     out = nodes.score_agreement_node(
         {"responses": {"nemo": "metformin diabetes glucose", "deep": "melanoma pembrolizumab skin"}}, make_deps())
     assert "low agreement" in out["aggregated_answer"] and out["draft_answer"].startswith("metformin")
+
+
+def _garbage_then_valid(text):
+    """Router reply: garbage on the first call, a valid plan once the repair note is present."""
+    if "previous reply was not usable" in text:
+        return json.dumps({"tool_calls": [{"name": "search_trials", "args": {"condition": "melanoma"}}]})
+    return "let me think about that"
+
+
+def test_plan_repair_recovers_a_bad_first_reply(make_deps, brain):
+    brain.router_reply = _garbage_then_valid
+    out = nodes.plan_tools_node({"question": "melanoma trials"}, make_deps())
+    assert out["tool_calls_llm"][0]["args"] == {"condition": "melanoma", "max_results": 25}
+    assert out["plan_source"] == "llm" and out["plan_attempts"] == 2
+    assert out["errors"] == []
+
+
+def test_plan_repair_note_names_the_problem(make_deps, brain):
+    seen = []
+
+    def reply(text):
+        seen.append(text)
+        return json.dumps({"tool_calls": []})              # valid JSON, no calls
+
+    brain.router_reply = reply
+    nodes.plan_tools_node({"question": "melanoma trials"}, make_deps())
+    assert "it had no valid tool call" in seen[1]
+    assert "Valid tools: search_trials, get_trial, compare_trials, get_eligibility" in seen[1]
+
+
+def test_plan_repair_can_be_disabled_to_measure_the_bare_model(make_deps, brain):
+    brain.router_reply = _garbage_then_valid
+    out = nodes.plan_tools_node({"question": "melanoma trials"}, make_deps(make_config(plan_repair_retries=0)))
+    assert out["tool_calls_llm"] == [] and out["plan_attempts"] == 1 and out["plan_source"] == "default"
+
+
+def test_plan_repair_gives_up_after_the_configured_retries(make_deps, brain):
+    brain.router_reply = "no json here"
+    out = nodes.plan_tools_node({"question": "melanoma trials"}, make_deps(make_config(plan_repair_retries=2)))
+    assert out["plan_attempts"] == 3 and out["plan_source"] == "default"
+    assert out["plan_raw"] == "no json here" and out["plan_json_ok"] is False
+    assert len(out["errors"]) == 3
+
+
+def test_default_plan_uses_phase_and_status_from_the_question(make_deps, brain):
+    brain.router_reply = "no json here"
+    out = nodes.plan_tools_node({"question": "Which phase 3 trials are recruiting for lupus?"},
+                                make_deps(make_config(plan_repair_retries=0)))
+    assert out["tool_plan"][0]["args"] == {"term": "Which phase 3 trials are recruiting for lupus?",
+                                           "phase": "PHASE3", "status": "RECRUITING"}
+
+
+def test_synthesis_prompt_tells_models_to_flag_population_mismatches():
+    from src.agent.prompts import SYNTHESIS_PROMPT
+    text = SYNTHESIS_PROMPT.messages[0].prompt.template
+    assert "different population" in text and "prediabetes" in text

@@ -17,6 +17,12 @@ TOOL_ROUTER_PROMPT = ChatPromptTemplate.from_messages([
     ("human", "{question}"),
 ])
 
+PLAN_REPAIR = (
+    "Your previous reply was not usable: {problem}. Reply again with ONLY a JSON object of the form "
+    '{{"tool_calls": [{{"name": "<tool>", "args": {{...}}}}]}}. '
+    "Valid tools: {tools}. Each call needs one of those names and valid args."
+)
+
 REFORMULATION_PROMPT = ChatPromptTemplate.from_messages([
     ("system", (
         "The initial clinical trial search returned no relevant results. "
@@ -44,7 +50,10 @@ SYNTHESIS_PROMPT = ChatPromptTemplate.from_messages([
         "if a trial compares drug A vs drug B, do not describe it as combining them\n"
         "6. Use the exact wording from the trial description when describing what a trial studies\n"
         "7. Do not generalise across trials — describe each trial individually and accurately\n"
-        "8. Cite ONLY NCT IDs that appear in the provided trial data\n\n"
+        "8. Cite ONLY NCT IDs that appear in the provided trial data\n"
+        "9. Present a trial as an answer only if its listed conditions and eligibility fit the question. "
+        "If a trial studies a different population (for example prediabetes when asked about type 2 "
+        "diabetes), say so plainly or leave it out\n\n"
         "Think step by step: first identify which trials are relevant to the question, "
         "then reason through what each relevant trial says, "
         "then synthesize a cited answer."

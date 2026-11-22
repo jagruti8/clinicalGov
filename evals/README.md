@@ -31,6 +31,8 @@ Our pipeline calls Ollama itself, with the models set in `config/models.yaml`. I
 | `tool_selection` | does the planner pick the right tool, and is its output valid | `tool_queries.jsonl` | fast (planning only) |
 | `retrieval_check` | does the API query surface the expected trial | `retrieval_queries.jsonl` | medium (no synthesis) |
 
+`tool_selection` scores the planner with `plan_repair_retries` as configured (default 1, so one corrective retry). To measure the bare model's first-try reliability, set `plan_repair_retries: 0` for that run. The sample explanation shows the planner call count and its raw reply.
+
 `faithfulness` and `citation_accuracy` come from the judge model (an LLM). `verified_citation_rate` and `evidence_support_rate` are computed by code, so they do not depend on a judge. Report both and say which is which.
 
 ## Quick start

@@ -5,17 +5,17 @@ Every node is `fn(state, deps) -> dict` (a partial state update).
 """
 from concurrent.futures import ThreadPoolExecutor
 
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from src.agent.deps import Deps
 from src.agent.prompts import (
-    REFORMULATION_PROMPT, REVISION_FEEDBACK, SYNTHESIS_PROMPT, TOOL_ROUTER_PROMPT,
+    PLAN_REPAIR, REFORMULATION_PROMPT, REVISION_FEEDBACK, SYNTHESIS_PROMPT, TOOL_ROUTER_PROMPT,
 )
 from src.agent.state import RAGState
 from src.agent.tools import (
-    SearchTrialsArgs, calls_from_json, calls_from_native, execute_tool, find_nct_ids,
-    nct_fix_call, parse_json_loose, plan_covers_ids, tool_descriptions, tool_schemas,
-    validate_call,
+    TOOLS, SearchTrialsArgs, calls_from_json, calls_from_native, execute_tool, find_nct_ids,
+    heuristic_search_args, nct_fix_call, parse_json_loose, plan_covers_ids, tool_descriptions,
+    tool_schemas, validate_call,
 )
 from src.llm.aggregator import LOW_AGREEMENT, agreement_score, combine_responses
 from src.llm.fallback import AllModelsFailed
@@ -41,7 +41,10 @@ def _plan_native(deps: Deps, planner: str, question: str) -> list[dict]:
 
 def plan_tools_node(state: RAGState, deps: Deps) -> dict:
     """Ask the planner model which tool(s) to call. `tool_calls_llm` keeps the model's
-    own valid calls untouched; `tool_plan` is what will run (after the NCT override)."""
+    own valid calls untouched; `tool_plan` is what will run (after the NCT override).
+
+    If the reply has no usable call, the planner gets `plan_repair_retries` more tries,
+    each told what was wrong. After that a heuristic search runs instead."""
     question = state["question"]
     settings = deps.config.pipeline
     planner = deps.config.roles.planner
@@ -50,7 +53,11 @@ def plan_tools_node(state: RAGState, deps: Deps) -> dict:
 
     calls: list[dict] = []
     json_ok = False
+    raw = ""
+    attempts = 0
+    failed_calls: list[str] = []
     if deps.registry.spec(planner).tool_calling == "native":
+        attempts += 1
         try:
             calls = _plan_native(deps, planner, question)
             json_ok = bool(calls)
@@ -60,12 +67,25 @@ def plan_tools_node(state: RAGState, deps: Deps) -> dict:
 
     if not calls:
         messages = TOOL_ROUTER_PROMPT.format_messages(question=question, tools=tool_descriptions())
-        try:
-            result = deps.registry.call(planner, messages)
-            calls, json_ok = calls_from_json(result.text)
+        for _ in range(1 + settings.plan_repair_retries):
+            try:
+                result = deps.registry.call(planner, messages)
+            except AllModelsFailed as exc:
+                errors.append(f"tool planning failed: {exc}")
+                break
+            attempts += 1
+            raw = result.text
             models_used["planner"] = result.model
-        except AllModelsFailed as exc:
-            errors.append(f"tool planning failed: {exc}")
+            calls, json_ok = calls_from_json(raw)
+            if calls:
+                break
+            failed_calls.append(f"planner gave no usable tool call (call {attempts}): {raw.strip()[:120]!r}")
+            problem = "it had no valid tool call" if json_ok else "it was not valid JSON"
+            repair = PLAN_REPAIR.format(problem=problem, tools=", ".join(TOOLS))
+            messages = messages + [AIMessage(content=raw), HumanMessage(content=repair)]
+
+    if not calls:                       # a repaired reply needs no error; `plan_attempts` shows it
+        errors.extend(failed_calls)
 
     plan = [dict(call, args=dict(call["args"])) for call in calls]
     source = "llm" if plan else "default"
@@ -76,12 +96,14 @@ def plan_tools_node(state: RAGState, deps: Deps) -> dict:
         source += "+nct_fix"
 
     if not plan:
-        plan = [{"name": "search_trials", "args": {"term": question}}]
+        plan = [{"name": "search_trials", "args": heuristic_search_args(question)}]
 
     return {
         "tool_calls_llm": calls,
         "plan_source": source,
         "plan_json_ok": json_ok,
+        "plan_raw": raw.strip()[:500],
+        "plan_attempts": attempts,
         "tool_plan": plan,
         "errors": errors,
         "models_used": models_used,

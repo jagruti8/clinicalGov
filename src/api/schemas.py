@@ -37,6 +37,7 @@ class AskResponse(BaseModel):
     tool_calls_llm: list[ToolCall] = []
     tool_runs: list[dict[str, Any]] = []
     plan_source: Optional[str] = None
+    plan_attempts: int = 0
     models_used: dict[str, str] = {}
     critique: dict[str, Any] = {}
     revision_count: int = 0
@@ -54,6 +55,8 @@ class PlanResponse(BaseModel):
     tool_plan: list[ToolCall] = []
     plan_source: Optional[str] = None
     plan_json_ok: bool = False
+    plan_raw: str = ""
+    plan_attempts: int = 0
     models_used: dict[str, str] = {}
     errors: list[str] = []
 

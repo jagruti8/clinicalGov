@@ -42,6 +42,7 @@ pipeline:
   max_context_chars: 6000         # 8B model context is tight on the free tier
   max_revisions: 1
   critique_mode: code_only        # saves free-tier quota; use full if you have headroom
+  plan_repair_retries: 1          # extra planner tries when the reply has no usable tool call; 0 measures the bare model
   nct_routing_override: true
   llm_retries: 3
   retry_backoff_s: 5.0

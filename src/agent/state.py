@@ -18,6 +18,8 @@ class RAGState(TypedDict, total=False):
     tool_calls_llm: list[dict]       # valid calls the planner model produced (what evals score)
     plan_source: str                 # llm | llm+nct_fix | default
     plan_json_ok: bool
+    plan_raw: str                    # planner's last raw reply, truncated (for debugging)
+    plan_attempts: int               # planner calls made, including repair retries
     tool_plan: list[dict]            # calls that will actually run
     tool_runs: list[dict]            # {"name", "args", "n_trials"} per executed call
     query_params: dict

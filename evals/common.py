@@ -185,7 +185,8 @@ def valid_plan_scorer():
         plan = state.metadata["plan"]
         ok = bool(plan["tool_calls_llm"])
         return Score(value=CORRECT if ok else INCORRECT,
-                     explanation=f"json parsed: {plan['plan_json_ok']}, valid calls: {len(plan['tool_calls_llm'])}")
+                     explanation=(f"json parsed: {plan['plan_json_ok']}, valid calls: {len(plan['tool_calls_llm'])}, "
+                                  f"planner calls: {plan.get('plan_attempts')}, raw reply: {plan.get('plan_raw', '')[:200]!r}"))
     return score
 
 

@@ -160,6 +160,27 @@ def calls_from_native(tool_calls: list) -> list[dict]:
     return valid[:MAX_TOOL_CALLS]
 
 
+PHASE_WORDS = {"1": "PHASE1", "i": "PHASE1", "2": "PHASE2", "ii": "PHASE2",
+               "3": "PHASE3", "iii": "PHASE3", "4": "PHASE4", "iv": "PHASE4"}
+
+
+def heuristic_search_args(question: str) -> dict:
+    """Fallback search when the planner gives no usable call: the question as free text,
+    plus phase and status filters when the question states them plainly."""
+    args = {"term": question}
+    phase = re.search(r"\bphase\s*(iv|iii|ii|i|[1-4])\b", question, re.IGNORECASE)
+    if phase:
+        args["phase"] = PHASE_WORDS[phase.group(1).lower()]
+    lowered = question.lower()
+    if "not yet recruiting" in lowered:
+        args["status"] = "NOT_YET_RECRUITING"
+    elif re.search(r"(?<!not )recruiting", lowered):
+        args["status"] = "RECRUITING"
+    elif "completed" in lowered:
+        args["status"] = "COMPLETED"
+    return args
+
+
 def find_nct_ids(text: str) -> list[str]:
     """NCT IDs in text, in order, de-duplicated."""
     return list(dict.fromkeys(NCT_PATTERN.findall((text or "").upper())))

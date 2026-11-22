@@ -68,6 +68,7 @@ class PipelineSettings(BaseModel):
     max_revisions: int = Field(1, ge=0, le=3)
     critique_mode: Literal["full", "code_only", "off"] = "full"
     nct_routing_override: bool = True
+    plan_repair_retries: int = Field(1, ge=0, le=3)
     llm_retries: int = Field(2, ge=0, le=10)
     retry_backoff_s: float = Field(2.0, ge=0)
 

@@ -87,7 +87,8 @@ class Brain:
     def respond(self, text: str) -> str:
         if "route questions about clinical trials" in text:
             if self.router_reply is not None:
-                return self.router_reply
+                reply = self.router_reply
+                return reply(text) if callable(reply) else reply
             question = text.split("\n")[-1]
             ids = re.findall(r"NCT\d{8}", question)
             if len(ids) >= 2:

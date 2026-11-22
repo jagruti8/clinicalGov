@@ -96,3 +96,14 @@ def test_execute_tools_against_fake_api():
 def test_schemas_cover_every_tool():
     names = {s["function"]["name"] for s in tool_schemas()}
     assert names == {"search_trials", "get_trial", "compare_trials", "get_eligibility"}
+
+
+def test_heuristic_search_args_reads_phase_and_status():
+    from src.agent.tools import heuristic_search_args
+    q = "Are there phase III trials not yet recruiting for asthma?"
+    assert heuristic_search_args(q) == {"term": q, "phase": "PHASE3", "status": "NOT_YET_RECRUITING"}
+    assert heuristic_search_args("phase2 completed trials of statins")["phase"] == "PHASE2"
+    assert heuristic_search_args("phase 2 completed trials of statins")["status"] == "COMPLETED"
+    assert heuristic_search_args("phase IV recruiting")["phase"] == "PHASE4"
+    assert heuristic_search_args("trials that are not recruiting") == {"term": "trials that are not recruiting"}
+    assert heuristic_search_args("melanoma") == {"term": "melanoma"}

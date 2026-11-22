@@ -52,6 +52,7 @@ pipeline:
   max_context_chars: 5000         # cluster: 12000
   max_revisions: 1
   critique_mode: full             # full | code_only | off
+  plan_repair_retries: 1          # extra planner tries when the reply has no usable tool call; 0 measures the bare model
   nct_routing_override: true      # if the question names NCT IDs the plan must use them
   llm_retries: 2
   retry_backoff_s: 2.0

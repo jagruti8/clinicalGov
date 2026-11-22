@@ -53,6 +53,7 @@ pipeline:
   max_context_chars: 12000
   max_revisions: 1
   critique_mode: full
+  plan_repair_retries: 1          # 0 measures the bare model's first-try plan validity
   nct_routing_override: true
   llm_retries: 2
   retry_backoff_s: 2.0

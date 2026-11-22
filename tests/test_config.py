@@ -81,3 +81,9 @@ def test_shipped_configs_load():
     for name in ("config/models.yaml", "config/models.cloud.yaml"):
         config = load_config(name)
         assert config.roles.synthesizers
+
+
+def test_plan_repair_default_and_bounds(tmp_path):
+    assert load_config(write(tmp_path, VALID)).pipeline.plan_repair_retries == 1
+    with pytest.raises(ConfigError):
+        load_config(write(tmp_path, VALID + "pipeline: {plan_repair_retries: 9}\n"))
