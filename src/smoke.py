@@ -105,7 +105,7 @@ def _check_embeddings_and_store(config, results):
 
 def run_smoke(quick: bool = False) -> bool:
     results: list[str] = []
-    print("ClinicalGov smoke test\n")
+    print("ClinTrialNavigator smoke test\n")
 
     try:
         config = load_config()

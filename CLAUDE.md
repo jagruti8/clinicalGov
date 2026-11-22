@@ -52,6 +52,7 @@ src/llm/
 src/retrieval/             ctgov_client.py (live API, paging, retry, snapshot cache), vector_store.py
 src/evaluation/            judge.py, harness.py (quick CLI eval)
 src/api/                   FastAPI app and schemas
+ui/                        Streamlit app (app.py) and pure helpers (ui_lib.py); streamlit is optional, see requirements-ui.txt
 src/smoke.py               --smoke checks
 evals/                     Inspect tasks, dataset generator, README
 config/                    models.yaml (Ollama), models.cloud.yaml (Groq + Gemini)
@@ -63,6 +64,7 @@ config/                    models.yaml (Ollama), models.cloud.yaml (Groq + Gemin
 - **Dependency injection.** Graph nodes are `fn(state, deps)`. Tests pass fakes (see tests/conftest.py); production uses `build_default_deps`.
 - **Code decides verification.** NCT citation existence and quote support are computed by code. LLMs only extract claims and give critique.
 - **`tool_calls_llm` vs `tool_plan`.** The first is what the planner model produced (scored by tool-selection evals); the second is what runs after the NCT-ID override (`nct_routing_override`).
+- **UI runs the pipeline in-process.** `ui/app.py` calls `ClinicalPipeline.ask_stream`, which yields one event per finished graph node and then the same result `ask` returns. Everything testable lives in `ui/ui_lib.py`, which does not import streamlit. Start it from the repo root so `.streamlit/config.toml` applies.
 - **Planner repair.** If the planner reply has no usable tool call, it gets `plan_repair_retries` more tries (default 1), each told what was wrong. After that a heuristic search runs (free text plus any phase or status the question states). `plan_attempts` and `plan_raw` record what happened. Set `plan_repair_retries: 0` to measure the bare model's valid-plan rate.
 - **Population mismatches.** The synthesis prompt tells models to flag or omit trials whose population differs from the question (prediabetes vs type 2 diabetes). Trials are never dropped automatically on a critic's flag: small critics are often wrong. Unresolved review issues appear in `warnings` and `critique`, not in the answer text.
 - **Retrieval is restricted to the current fetch.** ChromaDB is a cache plus ranking index; results never come from unrelated cached trials. Lookups by NCT ID bypass it.

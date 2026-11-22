@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1620 1030" width="1620" height="1030" font-family="Inter, 'DejaVu Sans', Arial, sans-serif" xmlns:c2pa="http://c2pa.org/manifest">
+<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 1L9 5L0 9z" fill="#6B7774"/></marker></defs>
+<rect width="1620" height="1030" fill="#F6F7F5"/>
+<text x="290" y="30" text-anchor="start" font-size="12" fill="#4A5654">INTERFACES</text>
+<text x="290" y="30" font-size="12" font-weight="700" letter-spacing="1.5" fill="#4A5654" opacity="0"></text>
+<rect x="290" y="42" width="200" height="56" rx="9" fill="#FFFFFF" stroke="#0F6E65" stroke-width="1.6"/>
+<text x="390.0" y="67.0" text-anchor="middle" font-size="15" font-weight="600" fill="#17211F">Streamlit UI</text>
+<text x="390.0" y="85.0" text-anchor="middle" font-size="12" fill="#4A5654">ui/app.py</text>
+<rect x="520" y="42" width="200" height="56" rx="9" fill="#FFFFFF" stroke="#0F6E65" stroke-width="1.6"/>
+<text x="620.0" y="67.0" text-anchor="middle" font-size="15" font-weight="600" fill="#17211F">CLI</text>
+<text x="620.0" y="85.0" text-anchor="middle" font-size="12" fill="#4A5654">main.py</text>
+<rect x="750" y="42" width="200" height="56" rx="9" fill="#FFFFFF" stroke="#0F6E65" stroke-width="1.6"/>
+<text x="850.0" y="67.0" text-anchor="middle" font-size="15" font-weight="600" fill="#17211F">REST API</text>
+<text x="850.0" y="85.0" text-anchor="middle" font-size="12" fill="#4A5654">FastAPI, src/api</text>
+<path d="M390 98V118M620 98V118M850 98V118M390 118H850" fill="none" stroke="#6B7774" stroke-width="1.8"/>
+<path d="M390 118V198" fill="none" stroke="#6B7774" stroke-width="1.8" marker-end="url(#ar)"/>
+<rect x="250" y="136" width="1100" height="760" rx="16" fill="none" stroke="#0F6E65" stroke-width="2" stroke-dasharray="2 0"/>
+<text x="270" y="130" font-size="13" font-weight="700" fill="#0F6E65"></text>
+<rect x="1000" y="124" width="330" height="24" rx="6" fill="#F6F7F5"/>
+<text x="1015" y="141" text-anchor="start" font-size="13" fill="#0F6E65">LangGraph pipeline (src/agent, built once)</text>
+<text x="280" y="141" font-size="13" font-weight="700" fill="#0F6E65" opacity="0"></text>
+<rect x="260" y="162" width="1080" height="96" rx="12" fill="#E9ECE9"/>
+<text x="282" y="181" font-size="11" font-weight="700" letter-spacing="1.5" fill="#4A5654">ORCHESTRATOR</text>
+<rect x="260" y="272" width="1080" height="290" rx="12" fill="#E3F2EF"/>
+<text x="282" y="291" font-size="11" font-weight="700" letter-spacing="1.5" fill="#4A5654">RETRIEVAL</text>
+<rect x="260" y="576" width="1080" height="86" rx="12" fill="#E8EEF8"/>
+<text x="282" y="595" font-size="11" font-weight="700" letter-spacing="1.5" fill="#4A5654">EVIDENCE</text>
+<rect x="260" y="676" width="1080" height="96" rx="12" fill="#F4EAF2"/>
+<text x="282" y="695" font-size="11" font-weight="700" letter-spacing="1.5" fill="#4A5654">CRITIQUE</text>
+<rect x="260" y="786" width="1080" height="98" rx="12" fill="#E9ECE9"/>
+<text x="282" y="805" font-size="11" font-weight="700" letter-spacing="1.5" fill="#4A5654">ORCHESTRATOR</text>
+<rect x="330" y="198" width="120" height="46" rx="9" fill="#FFFFFF" stroke="#0F6E65" stroke-width="1.6"/>
+<text x="390.0" y="226.0" text-anchor="middle" font-size="15" font-weight="600" fill="#17211F">start</text>
+<rect x="500" y="198" width="170" height="46" rx="9" fill="#FFFFFF" stroke="#0F6E65" stroke-width="1.6"/>
+<text x="585.0" y="226.0" text-anchor="middle" font-size="15" font-weight="600" fill="#17211F">route by intent</text>
+<path d="M390 244V330" fill="none" stroke="#6B7774" stroke-width="1.8" marker-end="url(#ar)"/>
+<path d="M440 330V300H540V244" fill="none" stroke="#6B7774" stroke-width="1.8" marker-end="url(#ar)"/>
+<path d="M600 244V330" fill="none" stroke="#6B7774" stroke-width="1.8" marker-end="url(#ar)"/>
+<text x="700" y="226" text-anchor="start" font-size="12" fill="#4A5654">picks the path: search, lookup, compare, eligibility</text>
+<rect x="320" y="330" width="140" height="44" rx="9" fill="#FFFFFF" stroke="#0F6E65" stroke-width="1.6"/>
+<text x="390.0" y="357.0" text-anchor="middle" font-size="15" font-weight="600" fill="#17211F">plan_tools</text>
+<rect x="510" y="330" width="150" height="44" rx="9" fill="#FFFFFF" stroke="#0F6E65" stroke-width="1.6"/>
+<text x="585.0" y="357.0" text-anchor="middle" font-size="15" font-weight="600" fill="#17211F">execute_tools</text>
+<rect x="700" y="330" width="150" height="44" rx="9" fill="#FFFFFF" stroke="#0F6E65" stroke-width="1.6"/>
+<text x="775.0" y="357.0" text-anchor="middle" font-size="15" font-weight="600" fill="#17211F">retrieve</text>
+<rect x="890" y="330" width="140" height="44" rx="9" fill="#FFFFFF" stroke="#0F6E65" stroke-width="1.6"/>
+<text x="960.0" y="357.0" text-anchor="middle" font-size="14" font-weight="600" fill="#17211F">relevance_check</text>
+<path d="M660 352H700" fill="none" stroke="#6B7774" stroke-width="1.8" marker-end="url(#ar)"/>
+<path d="M850 352H890" fill="none" stroke="#6B7774" stroke-width="1.8" marker-end="url(#ar)"/>
+<rect x="770" y="274" width="160" height="40" rx="9" fill="#FFFFFF" stroke="#0F6E65" stroke-width="1.6"/>
+<text x="850.0" y="299.0" text-anchor="middle" font-size="14" font-weight="600" fill="#17211F">reformulate</text>
+<path d="M960 330V294H930" fill="none" stroke="#6B7774" stroke-width="1.8" marker-end="url(#ar)"/>
+<path d="M770 294H650V330" fill="none" stroke="#6B7774" stroke-width="1.8" marker-end="url(#ar)"/>
+<text x="985" y="300" text-anchor="start" font-size="12" fill="#4A5654">weak results (max 2)</text>
+<rect x="1070" y="304" width="250" height="130" rx="9" fill="#FFFFFF" stroke="#0F6E65" stroke-width="1.6"/>
+<text x="1195" y="326" text-anchor="middle" font-size="15" fill="#17211F">synthesize</text>
+<text x="1195" y="326" font-size="15" font-weight="600" text-anchor="middle" fill="#17211F"></text>
+<rect x="1084" y="340" width="70" height="34" rx="9" fill="#E3F2EF" stroke="#0F6E65" stroke-width="1.6"/>
+<text x="1119.0" y="362.0" text-anchor="middle" font-size="12" font-weight="400" fill="#17211F">Model 1</text>
+<rect x="1161" y="340" width="70" height="34" rx="9" fill="#E3F2EF" stroke="#0F6E65" stroke-width="1.6"/>
+<text x="1196.0" y="362.0" text-anchor="middle" font-size="12" font-weight="400" fill="#17211F">Model 2</text>
+<rect x="1238" y="340" width="70" height="34" rx="9" fill="#E3F2EF" stroke="#0F6E65" stroke-width="1.6"/>
+<text x="1273.0" y="362.0" text-anchor="middle" font-size="12" font-weight="400" fill="#17211F">Model N</text>
+<text x="1195" y="396" text-anchor="middle" font-size="12" fill="#4A5654">all models answer in parallel</text>
+<text x="1195" y="414" text-anchor="middle" font-size="12" fill="#4A5654">retry and fallback per model</text>
+<path d="M1030 352H1070" fill="none" stroke="#6B7774" stroke-width="1.8" marker-end="url(#ar)"/>
+<rect x="1070" y="454" width="250" height="50" rx="9" fill="#FFFFFF" stroke="#0F6E65" stroke-width="1.6"/>
+<text x="1195.0" y="476.0" text-anchor="middle" font-size="15" font-weight="600" fill="#17211F">score_agreement</text>
+<text x="1195.0" y="494.0" text-anchor="middle" font-size="12" fill="#4A5654">mean pairwise cosine similarity</text>
+<path d="M1195 434V454" fill="none" stroke="#6B7774" stroke-width="1.8" marker-end="url(#ar)"/>
+<path d="M705 440v50c0 10 20 18 70 18s70-8 70-18v-50" fill="#FFFFFF" stroke="#0F6E65" stroke-width="1.6"/>
+<ellipse cx="775" cy="440" rx="70" ry="14" fill="#FFFFFF" stroke="#0F6E65" stroke-width="1.6"/>
+<text x="775" y="478" text-anchor="middle" font-size="14" fill="#17211F">ChromaDB</text>
+<text x="775" y="496" text-anchor="middle" font-size="11" fill="#4A5654">semantic ranking</text>
+<path d="M775 374V426" fill="none" stroke="#6B7774" stroke-width="1.8" marker-end="url(#ar)"/>
+<path d="M775 426V374" fill="none" stroke="#6B7774" stroke-width="1.8" marker-end="url(#ar)" opacity="0"/>
+<text x="790" y="404" text-anchor="start" font-size="11" fill="#4A5654">embed, rank</text>
+<text x="775" y="528" text-anchor="middle" font-size="11" fill="#4A5654">embeddings: sentence-transformers</text>
+<text x="320" y="414" text-anchor="start" font-size="12" fill="#17211F">tools the planner can call:</text>
+<text x="320" y="434" text-anchor="start" font-size="12" fill="#4A5654">· search_trials</text>
+<text x="320" y="452" text-anchor="start" font-size="12" fill="#4A5654">· get_trial</text>
+<text x="320" y="470" text-anchor="start" font-size="12" fill="#4A5654">· compare_trials</text>
+<text x="320" y="488" text-anchor="start" font-size="12" fill="#4A5654">· get_eligibility</text>
+<text x="320" y="520" text-anchor="start" font-size="12" fill="#4A5654" font-style="italic">NCT ID lookups skip the vector store</text>
+<rect x="1070" y="596" width="250" height="50" rx="9" fill="#FFFFFF" stroke="#0F6E65" stroke-width="1.6"/>
+<text x="1195.0" y="618.0" text-anchor="middle" font-size="15" font-weight="600" fill="#17211F">evidence</text>
+<text x="1195.0" y="636.0" text-anchor="middle" font-size="12" fill="#4A5654">claims to quotes; code checks them</text>
+<path d="M1195 504V596" fill="none" stroke="#6B7774" stroke-width="1.8" marker-end="url(#ar)"/>
+<text x="320" y="626" text-anchor="start" font-size="12" fill="#4A5654">LLM extracts claims and quotes; code verifies every citation</text>
+<rect x="1070" y="696" width="250" height="50" rx="9" fill="#FFFFFF" stroke="#0F6E65" stroke-width="1.6"/>
+<text x="1195.0" y="718.0" text-anchor="middle" font-size="15" font-weight="600" fill="#17211F">critique</text>
+<text x="1195.0" y="736.0" text-anchor="middle" font-size="12" fill="#4A5654">code checks + LLM review</text>
+<path d="M1195 646V696" fill="none" stroke="#6B7774" stroke-width="1.8" marker-end="url(#ar)"/>
+<path d="M1320 721H1332V369H1320" fill="none" stroke="#6B7774" stroke-width="1.8" marker-end="url(#ar)"/>
+<text x="1085" y="688" text-anchor="start" font-size="1" fill="#4A5654"></text>
+<text x="1052" y="725" text-anchor="end" font-size="11" fill="#4A5654">revise: back to synthesize with feedback (max_revisions)</text>
+<text x="320" y="726" text-anchor="start" font-size="12" fill="#4A5654">unresolved issues are surfaced as warnings, not hidden</text>
+<rect x="1070" y="808" width="250" height="50" rx="9" fill="#FFFFFF" stroke="#0F6E65" stroke-width="1.6"/>
+<text x="1195.0" y="830.0" text-anchor="middle" font-size="15" font-weight="600" fill="#17211F">finalize</text>
+<text x="1195.0" y="848.0" text-anchor="middle" font-size="12" fill="#4A5654">tag unverified citations, total latency</text>
+<path d="M1195 746V808" fill="none" stroke="#6B7774" stroke-width="1.8" marker-end="url(#ar)"/>
+<text x="320" y="836" text-anchor="start" font-size="12" fill="#4A5654">returns: answer, citations, agreement, critique, timings, models used</text>
+<rect x="30" y="330" width="200" height="90" rx="9" fill="#FFFFFF" stroke="#6B7774" stroke-width="1.6"/>
+<text x="130.0" y="372.0" text-anchor="middle" font-size="15" font-weight="600" fill="#17211F">ClinicalTrials.gov</text>
+<text x="130.0" y="390.0" text-anchor="middle" font-size="12" fill="#4A5654">v2 API, live, no auth</text>
+<path d="M230 400H585V374" fill="none" stroke="#6B7774" stroke-width="1.8" marker-end="url(#ar)"/>
+<text x="130" y="438" text-anchor="middle" font-size="11" fill="#4A5654">live fetch, paging, retry</text>
+<rect x="30" y="560" width="200" height="96" rx="9" fill="#FFFFFF" stroke="#6B7774" stroke-width="1.6"/>
+<text x="130.0" y="605.0" text-anchor="middle" font-size="15" font-weight="600" fill="#17211F">config/models.yaml</text>
+<text x="130.0" y="623.0" text-anchor="middle" font-size="12" fill="#4A5654">roles, models, pipeline limits</text>
+<path d="M230 608H250" fill="none" stroke="#6B7774" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ar)"/>
+<rect x="30" y="700" width="200" height="110" rx="9" fill="#FFFFFF" stroke="#6B7774" stroke-width="1.6"/>
+<text x="130.0" y="752.0" text-anchor="middle" font-size="15" font-weight="600" fill="#17211F">LLM providers</text>
+<text x="130.0" y="770.0" text-anchor="middle" font-size="12" fill="#4A5654">Ollama or cloud APIs, any mix</text>
+<path d="M230 755H250" fill="none" stroke="#6B7774" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ar)"/>
+<text x="130" y="826" text-anchor="middle" font-size="11" fill="#4A5654">planner, synthesizers, critic</text>
+<rect x="1400" y="780" width="200" height="100" rx="9" fill="#E3F2EF" stroke="#0F6E65" stroke-width="1.6"/>
+<text x="1500.0" y="827.0" text-anchor="middle" font-size="15" font-weight="600" fill="#17211F">Answer</text>
+<text x="1500.0" y="845.0" text-anchor="middle" font-size="12" fill="#4A5654">citations, agreement, trace</text>
+<path d="M1320 833H1400" fill="none" stroke="#6B7774" stroke-width="1.8" marker-end="url(#ar)"/>
+<path d="M1350 833H1400" fill="none" stroke="#F6F7F5" stroke-width="0.1" marker-end="url(#ar)"/>
+<rect x="250" y="920" width="1100" height="86" rx="12" fill="#FFFFFF" stroke="#C3CBC8" stroke-width="1.4"/>
+<text x="272" y="946" text-anchor="start" font-size="11" fill="#4A5654">AROUND THE PIPELINE</text>
+<text x="272" y="946" font-size="11" font-weight="700" letter-spacing="1.5" fill="#4A5654" opacity="0"></text>
+<text x="272" y="970" text-anchor="start" font-size="13" fill="#17211F">Evals (Inspect AI): tool_selection, valid_plan, retrieval_check, answer_quality</text>
+<text x="272" y="990" text-anchor="start" font-size="13" fill="#17211F">Observability: seconds per node, model per step.  Tests and CI: pytest, GitHub Actions, Docker.</text>
+<metadata><c2pa:manifest>AAAWgmp1bWIAAAAeanVtZGMycGEAEQAQgAAAqgA4m3EDYzJwYQAAABZcanVtYgAAAEdqdW1kYzJtYQARABCAAACqADibcQN1cm46YzJwYTo5ZTVmMDJlMS00MDFmLTQ2NjctOWFhMS03YTVkYjVhOTU3ZjgAAAADl2p1bWIAAAApanVtZGMyYXMAEQAQgAAAqgA4m3EDYzJwYS5hc3NlcnRpb25zAAAAALxqdW1iAAAARGp1bWRjYm9yABEAEIAAAKoAOJtxE2MycGEuaW5ncmVkaWVudC52MwAAAAAYYzJzaDOrSlXRDl6bw8hrs23/9RgAAABwY2JvcqNpZGM6Zm9ybWF0bWltYWdlL3N2Zyt4bWxqaW5zdGFuY2VJRHgseG1wOmlpZDpjZTlhNmUwMy1iMTAxLTQ5YTktOWE5YS03NDcwZGJhNWIwM2VscmVsYXRpb25zaGlwaHBhcmVudE9mAAAB4mp1bWIAAABBanVtZGNib3IAEQAQgAAAqgA4m3ETYzJwYS5hY3Rpb25zLnYyAAAAABhjMnNo3n7e/wNQt2wOlx96KJpA/AAAAZljYm9yomdhY3Rpb25zgqJmYWN0aW9ua2MycGEub3BlbmVkanBhcmFtZXRlcnOha2luZ3JlZGllbnRzgaJjdXJseC1zZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmluZ3JlZGllbnQudjNkaGFzaFggMH3mjDgBDXq44qxSP8htCrH3US4geu++ecF12nxMqmGkZmFjdGlvbngdY29tLmFudGhyb3BpYy5jbGF1ZGUucHJvdmlkZWRqcGFyYW1ldGVyc6F4H2NvbS5hbnRocm9waWMub3JpZ2luLWNvbmZpZGVuY2VndW5rbm93bmtkZXNjcmlwdGlvbnhmQ2xhdWRlIHByb3ZpZGVkIHRoaXMgZmlsZSBhdCB0aGUgcmVxdWVzdCBvZiBhIHVzZXIgYW5kIG1heSBoYXZlIGNyZWF0ZWQgb3IgbW9kaWZpZWQgdGhlIGZpbGUgY29udGVudHMubXNvZnR3YXJlQWdlbnShZG5hbWVmQ2xhdWRlcmFsbEFjdGlvbnNJbmNsdWRlZPUAAADIanVtYgAAAEBqdW1kY2JvcgARABCAAACqADibcRNjMnBhLmhhc2guZGF0YQAAAAAYYzJzaLRGbaFpfOaJtw/cCxZbHgUAAACAY2JvcqVjYWxnZnNoYTI1NmNwYWRMAAAAAAAAAAAAAAAAZGhhc2hYIO3+A9Qx05aKPUrYitrCjnWXxtiq3AtncTqYEzaJDY/EZG5hbWVuanVtYmYgbWFuaWZlc3RqZXhjbHVzaW9uc4GiZXN0YXJ0GTTTZmxlbmd0aBkeBAAAAj5qdW1iAAAAJ2p1bWRjMmNsABEAEIAAAKoAOJtxA2MycGEuY2xhaW0udjIAAAACD2Nib3KlY2FsZ2ZzaGEyNTZpc2lnbmF0dXJleE1zZWxmI2p1bWJmPS9jMnBhL3VybjpjMnBhOjllNWYwMmUxLTQwMWYtNDY2Ny05YWExLTdhNWRiNWE5NTdmOC9jMnBhLnNpZ25hdHVyZWppbnN0YW5jZUlEeCx4bXA6aWlkOmMzMWJiZmZhLTY3ZWEtNGQwYS1iOGVlLTExYThlM2ZmYzNkY3JjcmVhdGVkX2Fzc2VydGlvbnODomN1cmx4LXNlbGYjanVtYmY9YzJwYS5hc3NlcnRpb25zL2MycGEuaW5ncmVkaWVudC52M2RoYXNoWCAwfeaMOAENerjirFI/yG0KsfdRLiB67755wXXafEyqYaJjdXJseCpzZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmFjdGlvbnMudjJkaGFzaFggAfm8zyRIewzJWcq0+UP2xzF1deH/l4+oi1YnW+vKuOSiY3VybHgpc2VsZiNqdW1iZj1jMnBhLmFzc2VydGlvbnMvYzJwYS5oYXNoLmRhdGFkaGFzaFggZeyIzNxYk1VDPIvmwqw5BwdUU5hga40CabfYHon7Q9p0Y2xhaW1fZ2VuZXJhdG9yX2luZm+jZG5hbWVvQW50aHJvcGljIEZpbGVzZ3ZlcnNpb25lMS4wLjBrc3BlY1ZlcnNpb25lMi40LjAAABA4anVtYgAAAChqdW1kYzJjcwARABCAAACqADibcQNjMnBhLnNpZ25hdHVyZQAAABAIY2JvctKEWQISogEmGCFZAgowggIGMIIBjaADAgECAhRA5aAK7sI50L64g/oGQgU9Z1UTADAKBggqhkjOPQQDAzBJMRcwFQYDVQQKEw5BbnRocm9waWMsIFBCQzEuMCwGA1UEAxMlQW50aHJvcGljIENvbnRlbnQgQ3JlZGVudGlhbHMgUm9vdCBDQTAeFw0yNjA4MDcxODQzNTZaFw0yODA4MDYxOTQzNTZaMEQxFzAVBgNVBAoTDkFudGhyb3BpYywgUEJDMSkwJwYDVQQDEyBBbnRocm9waWMgQ2xhdWRlIENvbnRlbnQgU2lnbmluZzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJh6CmvLUBgFFNU0vUKlOVtE6djd17L5SuwX0LemFisBM3dkd/3cyjxFA3Qo5S46fX0/ihY0VZ7mfb9KF703t5OjWDBWMA4GA1UdDwEB/wQEAwIHgDAVBgNVHSUEDjAMBgorBgEEAYPoXgIBMAwGA1UdEwEB/wQCMAAwHwYDVR0jBBgwFoAUzlHiBIFOZFsj+OPEz5o+nMHXXMIwCgYIKoZIzj0EAwMDZwAwZAIwMXMdFJ4BetLLVY7ORuE9noqbbAZOZn/aArXyTwFAZfKrPzxF2vPoJNf1+UCdg1XGAjBwX1zd9WGqYkqmL5SFqw1QySjr1zJfpJM9+1rdDwSPLMOPOjKuiXjoU/pUUeG9RwmhY3BhZFkNngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPZYQE2bWafl0x+jeO1hvGenfsPbzj8o7oUGfaVVniDdhHJcCL3SisBt4WHcYuFKI959Evg/x6e6ViGNSDcBf6+rkm4=</c2pa:manifest></metadata></svg>

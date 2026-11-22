@@ -25,7 +25,7 @@ def create_app(pipeline=None) -> FastAPI:
             app.state.pipeline = ClinicalPipeline()
         yield
 
-    app = FastAPI(title="ClinicalGov API", version="1.0.0", lifespan=lifespan)
+    app = FastAPI(title="ClinTrialNavigator API", version="1.0.0", lifespan=lifespan)
     app.state.pipeline = pipeline
 
     def get_pipeline(request: Request):

@@ -39,6 +39,8 @@ def main() -> None:
     parser.add_argument("--smoke", action="store_true", help="Check config, endpoints, and one query end to end")
     parser.add_argument("--quick", action="store_true", help="With --smoke: skip the LLM and full-pipeline checks")
     parser.add_argument("--serve", action="store_true", help="Run the REST API (uvicorn)")
+    parser.add_argument("--ui", action="store_true", help="Run the Streamlit UI (pip install -r requirements-ui.txt)")
+    parser.add_argument("--ui-port", type=int, default=8501, help="Port for --ui")
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8000)
     args = parser.parse_args()
@@ -49,6 +51,19 @@ def main() -> None:
     if args.smoke:
         from src.smoke import run_smoke
         raise SystemExit(0 if run_smoke(quick=args.quick) else 1)
+
+    if args.ui:
+        import subprocess
+        import sys
+        from pathlib import Path
+
+        try:
+            import streamlit  # noqa: F401
+        except ImportError:
+            raise SystemExit("Streamlit is not installed. Run: pip install -r requirements-ui.txt")
+        root = Path(__file__).resolve().parent      # run from the repo root so .streamlit/config.toml applies
+        raise SystemExit(subprocess.call(
+            [sys.executable, "-m", "streamlit", "run", "ui/app.py", "--server.port", str(args.ui_port)], cwd=root))
 
     if args.serve:
         import uvicorn

@@ -157,3 +157,16 @@ def test_think_blocks_are_stripped_for_reasoning_models(make_deps, brain):
     deps = make_deps(per_model={"nemo": brain.respond, "deep": lambda t: "<think>secret</think>" + brain.respond(t)})
     state = run(deps, "type 2 diabetes phase 3")
     assert "secret" not in state["responses"]["deep"] and "<think>" not in state["aggregated_answer"]
+
+
+def test_ask_stream_yields_each_node_then_the_same_result_as_ask(make_deps):
+    pipeline = ClinicalPipeline(config=make_deps().config, deps=make_deps())
+    events = list(pipeline.ask_stream("type 2 diabetes phase 3"))
+    nodes_seen = [e["node"] for e in events if e["event"] == "node"]
+    assert nodes_seen[:3] == ["start", "plan_tools", "route"] and nodes_seen[-1] == "finalize"
+    assert "synthesize" in nodes_seen and "evidence" in nodes_seen and "critique" in nodes_seen
+    assert events[-1]["event"] == "result" and sum(e["event"] == "result" for e in events) == 1
+    plain = pipeline.ask("type 2 diabetes phase 3")
+    streamed = events[-1]["result"]
+    for key in ("answer", "citations", "verified_citations", "intent", "tool_runs", "context_nct_ids", "plan_source"):
+        assert streamed[key] == plain[key], key

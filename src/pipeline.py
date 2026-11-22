@@ -68,6 +68,16 @@ class ClinicalPipeline:
     def ask(self, question: str) -> dict:
         return result_from_state(self.run_state(question))
 
+    def ask_stream(self, question: str):
+        """Like `ask`, but yields progress. One {"event": "node", "node", "update"} per finished
+        graph node, then {"event": "result", "result": ...} with the same result `ask` returns."""
+        state: dict = {"question": question}
+        for chunk in self._graph("full").stream({"question": question}, stream_mode="updates"):
+            for node, update in chunk.items():
+                state.update(update or {})
+                yield {"event": "node", "node": node, "update": update or {}}
+        yield {"event": "result", "result": result_from_state(state)}
+
     def plan(self, question: str) -> dict:
         """Tool planning only (no fetch, no synthesis). Used for tool-selection evals."""
         state = self._graph("plan_only").invoke({"question": question})

@@ -1,6 +1,6 @@
 # Sample queries
 
-Synthetic queries to try against ClinicalGov, grouped by kind. Each group says which tool the planner should pick and what to check in the output. Copy any line into the CLI:
+Synthetic queries to try against ClinTrialNavigator, grouped by kind. Each group says which tool the planner should pick and what to check in the output. Copy any line into the CLI:
 
 ```bash
 python main.py "What phase 3 trials are recruiting for type 2 diabetes?"

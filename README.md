@@ -1,4 +1,8 @@
-# ClinicalGov: agentic RAG over ClinicalTrials.gov
+# ClinTrialNavigator
+
+**Multi-LLM Multi-Agentic RAG System for Clinical Trial Q&A**
+
+**Cited, evidence-grounded answers over ClinicalTrials.gov**
 
 Answers natural language questions about clinical trials with cited, verified answers. Retrieval is live against the [ClinicalTrials.gov v2 API](https://clinicaltrials.gov/data-api/api) (no auth). Models are configured in one YAML file, so Ollama models, cloud models, or any mix can be swapped without touching code.
 
@@ -14,23 +18,7 @@ Limits worth knowing: recall is bounded by the API's own search, because only tr
 
 ## Agents
 
-```
-question
-  |
-Orchestrator   start -> (plan) -> route by intent -> ... -> finalize
-  |
-Retrieval      plan_tools -> execute_tools -> retrieve -> relevance_check
-  |                                  ^                          |
-  |                                  +-- reformulate (max 2) <--+ weak
-  |            synthesize (all models in parallel) -> score_agreement
-  |
-Evidence       claims -> quotes (LLM extracts; code verifies citations and quotes)
-  |
-Critique       code checks (+ LLM review in `full` mode)
-  |              +-- revise: back to synthesize with feedback (max_revisions)
-  v
-Orchestrator   finalize: tag unverified citations, total latency
-```
+![ClinTrialNavigator architecture](docs/architecture.svg)
 
 Lookups by NCT ID skip the vector store (the question already names the trials) and use code-only critique.
 
@@ -98,6 +86,26 @@ fallback: [nemotron, deepseek]
 - `critique_mode`: `full` (code checks and LLM review), `code_only`, or `off`.
 
 Changing models or pipeline settings changes the evaluation numbers, so rerun the evals.
+
+## UI
+
+A Streamlit app runs the pipeline in-process (no REST server needed) and shows progress as each stage finishes.
+
+![ClinTrialNavigator, ask a question](docs/ui-empty.svg)
+
+![ClinTrialNavigator, answer view with sample data](docs/ui-answer.svg)
+
+```bash
+pip install -r requirements-ui.txt
+python main.py --ui                                            # http://localhost:8501
+MODELS_CONFIG=config/models.cluster.yaml python main.py --ui   # use another model config
+```
+
+Start it from the repo root (`python main.py --ui` does this for you) so `.streamlit/config.toml`, which holds the theme, is picked up.
+
+It shows the answer with links to each trial record, verified and unverified citations, a tab per model with the agreement score, the evidence table, the trials the models saw, a banner for review issues that stayed open, per-stage timings, and the raw JSON.
+
+On a remote machine, forward the port (`ssh -L 8501:localhost:8501 <host>`). The app has no login, and every question runs your models, so do not expose it to the internet as is.
 
 ## REST API
 
