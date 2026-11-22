@@ -1,0 +1,47 @@
+# Cloud free-tier configuration (Groq + Gemini).
+# Use with:  MODELS_CONFIG=config/models.cloud.yaml   (needs GROQ_API_KEY and GEMINI_API_KEY)
+
+embedding:
+  model: sentence-transformers/all-MiniLM-L6-v2
+  device: cpu
+
+defaults:
+  temperature: 0.0
+  timeout_s: 120
+
+models:
+  llama70b:
+    provider: groq
+    model: llama-3.3-70b-versatile
+    api_key_env: GROQ_API_KEY
+  llama8b:
+    provider: groq
+    model: llama-3.1-8b-instant
+    api_key_env: GROQ_API_KEY
+  gemini:
+    provider: gemini
+    model: gemini-2.5-flash       # 2.0 variants show limit:0 on some free-tier accounts
+    api_key_env: GEMINI_API_KEY
+
+roles:
+  planner: llama70b
+  synthesizers: [llama70b, llama8b, gemini]
+  evidence: llama70b
+  critic: gemini
+  judge: gemini
+
+fallback: [llama70b, gemini, llama8b]
+
+pipeline:
+  max_reformulations: 2
+  relevance_threshold: 0.4
+  retrieval_k: 5
+  fetch_page_size: 25
+  fetch_max_results: 50
+  eligibility_chars: 1500
+  max_context_chars: 6000         # 8B model context is tight on the free tier
+  max_revisions: 1
+  critique_mode: code_only        # saves free-tier quota; use full if you have headroom
+  nct_routing_override: true
+  llm_retries: 3
+  retry_backoff_s: 5.0

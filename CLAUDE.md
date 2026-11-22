@@ -4,109 +4,89 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this project does
 
-Modular RAG pipeline that answers natural language questions about clinical trials by:
-1. Constructing structured queries over the ClinicalTrials.gov v2 REST API (no auth required)
-2. Embedding retrieved trials into ChromaDB and retrieving semantically relevant chunks
-3. Detecting weak retrieval and reformulating queries (up to 2 times) before synthesizing
-4. Calling three LLMs in parallel: Groq Llama-3.3-70B (primary), Groq Llama-3.1-8B (secondary), Gemini 2.5 Flash (tertiary, optional)
-5. Scoring cross-model agreement as a confidence signal (pairwise cosine similarity of response embeddings)
-6. Running an LLM-as-judge evaluation harness (Gemini judges Llama's output for faithfulness + citation accuracy)
+Agentic RAG pipeline that answers natural language questions about clinical trials:
+1. A planner model picks tools (search_trials, get_trial, compare_trials, get_eligibility) against the live ClinicalTrials.gov v2 API
+2. Search results are embedded into ChromaDB and ranked, restricted to the trials just fetched
+3. Weak retrieval triggers query reformulation (max 2)
+4. All configured synthesizer models answer in parallel (retry and fallback per call)
+5. Agreement across models is scored (null with one model)
+6. An evidence step verifies citations and quotes in code; a critique step may request one revision
+7. Evaluation: Inspect tasks in evals/ and a quick judge harness (`--eval`)
 
-## Setup
+## Setup and commands
 
 ```bash
-cp .env.example .env   # fill in GROQ_API_KEY and GEMINI_API_KEY
-conda create -n clinicalGov python=3.11 -y
-conda activate clinicalGov
+cp .env.example .env
+conda create -n clinicalGov python=3.11 -y && conda activate clinicalGov
 conda install -c conda-forge cryptography openssl -y
-pip install -r requirements.txt
-```
+pip install -r requirements.txt            # requirements-eval.txt adds Inspect
 
-## Commands
-
-```bash
-# Ask a question
-python main.py "What phase 3 trials are recruiting for type 2 diabetes?"
-
-# Interactive mode
-python main.py
-
-# Run evaluation suite (3 built-in test cases)
-python main.py --eval
-
-# Custom test cases
-python main.py --eval --test-cases my_cases.json
-
-# Unit tests (no API keys needed)
-pytest tests/ -v
-
-# Docker
-docker compose up --build
+python main.py --smoke                     # check config, Ollama, network, embeddings, one query
+python main.py "question"                  # ask (--json for the full result)
+python main.py --serve                     # REST API
+pytest tests/ -v                           # mocked, no services needed
+inspect eval evals/tool_selection.py       # see evals/README.md
 ```
 
 ## Architecture
 
 ```
 main.py
-└── src/agent/graph.py          # LangGraph StateGraph — wires all nodes
-    ├── src/agent/state.py      # RAGState TypedDict
-    ├── src/agent/prompts.py    # All ChatPromptTemplates (with CoT in SYNTHESIS_PROMPT)
-    └── src/agent/nodes.py      # Node functions (injected via functools.partial)
-        ├── src/retrieval/ctgov_client.py   # CT.gov v2 API + trial text formatting
-        ├── src/retrieval/vector_store.py   # ChromaDB + HuggingFace embeddings
-        └── src/llm/
-            ├── providers.py    # Groq (Llama-70B, Llama-8B) + Gemini LLM constructors
-            └── aggregator.py   # Pairwise cosine agreement scoring across 3 models
-
-src/evaluation/
-├── judge.py     # LLM-as-judge via JUDGE_PROMPT → JudgeScores (Pydantic)
-└── harness.py   # Orchestrates judge; run_evaluation_suite() with 20s delay between cases
+src/config.py              YAML config (models, roles, pipeline) via pydantic
+src/pipeline.py            ClinicalPipeline: the one facade CLI, API, and evals use
+src/observability.py       per-node timing, optional JSONL log
+src/agent/
+  graph.py                 LangGraph wiring; modes: full | retrieval_only | plan_only
+  state.py                 RAGState
+  deps.py                  Deps (registry, vector store, ctgov client, embedder), injectable
+  orchestrator.py          start, route (intent), finalize (authoritative citation check)
+  nodes.py                 retrieval agent: plan_tools, execute_tools, retrieve, relevance, reformulate, synthesize, agreement
+  evidence.py              claim extraction (LLM) and verification (code)
+  critique.py              code checks plus optional LLM review; revision routing
+  tools.py                 tool registry, Pydantic arg models, JSON/native routing helpers
+  prompts.py               all prompt templates
+src/llm/
+  providers.py             build_chat_model (ollama, openai_compatible, groq, gemini) and ModelRegistry
+  fallback.py              retry with backoff, fallback chain, <think> stripping
+  aggregator.py            pairwise agreement
+src/retrieval/             ctgov_client.py (live API, paging, retry, snapshot cache), vector_store.py
+src/evaluation/            judge.py, harness.py (quick CLI eval)
+src/api/                   FastAPI app and schemas
+src/smoke.py               --smoke checks
+evals/                     Inspect tasks, dataset generator, README
+config/                    models.yaml (Ollama), models.cloud.yaml (Groq + Gemini)
 ```
 
-### LangGraph flow
+## Key design decisions
 
-```
-START → query_constructor → retriever → relevance_checker
-                                              │
-                              [relevant / max reformulations hit]
-                                              ↓
-                                  multi_llm_synthesizer
-                                  (Llama-70B ∥ Llama-8B ∥ Gemini)
-                                              ↓
-                                    agreement_scorer → END
-                              │
-                         [not relevant]
-                              ↓
-                         reformulator → retriever  (loops, max 2×)
-```
+- **Config-driven models.** Nothing in code names a model. Roles (planner, synthesizers, evidence, critic, judge) and the fallback chain are in YAML. Provider libraries are imported lazily.
+- **Dependency injection.** Graph nodes are `fn(state, deps)`. Tests pass fakes (see tests/conftest.py); production uses `build_default_deps`.
+- **Code decides verification.** NCT citation existence and quote support are computed by code. LLMs only extract claims and give critique.
+- **`tool_calls_llm` vs `tool_plan`.** The first is what the planner model produced (scored by tool-selection evals); the second is what runs after the NCT-ID override (`nct_routing_override`).
+- **Retrieval is restricted to the current fetch.** ChromaDB is a cache plus ranking index; results never come from unrelated cached trials. Lookups by NCT ID bypass it.
+- **Single-model agreement is `None`,** not 1.0.
+- **Judge failures are `None`/NaN,** never 0.0, so they do not pollute averages.
+- **Ollama context.** `num_ctx` is set in config because Ollama silently truncates long prompts.
+- **urllib over httpx for ClinicalTrials.gov:** httpx was blocked by the site's WAF.
+- **aggFilters API format:** `aggFilters=phase:3,status:rec`, not the old `filter.phase` parameters.
+- **Snapshot cache** (`CTGOV_CACHE_MODE`) makes eval runs reproducible.
+- **RAGAS removed:** dependency conflicts with langchain. LLM-as-judge covers faithfulness.
 
-### Key design decisions
+## Known issues / things to verify
 
-- **Dependency injection via `functools.partial`**: node functions accept `state` + typed deps (llm, vector_store); `partial` binds deps at graph-build time so LangGraph sees a single-arg callable.
-- **ChromaDB deduplication**: trials are stored by `nct_id` as the document ID; `store_trials` checks existing IDs before embedding to avoid re-embedding on repeat queries.
-- **Relevance threshold**: `RELEVANCE_THRESHOLD = 0.4` (cosine similarity) in `nodes.py` — tune this if reformulation triggers too aggressively or too rarely.
-- **Three-model synthesis**: Llama-70B (primary), Llama-8B (secondary), Gemini (tertiary). Gemini is optional — if rate-limited it retries with backoff (15s, 30s) then silently skips. Only non-rate-limit errors (e.g. BadRequestError) skip immediately without retry.
-- **Pairwise agreement scoring**: confidence = average cosine similarity across all pairs of available model responses. If only one model responds, confidence = 1.0.
-- **Gemini-as-judge**: Gemini judges Llama-70B's output (not its own), avoiding self-evaluation bias. Judge runs only during `--eval`.
-- **CoT in synthesis prompt**: SYNTHESIS_PROMPT instructs models to think step by step — first identify relevant trials, then reason through each, then synthesize a cited answer.
-- **urllib over httpx for ClinicalTrials.gov**: httpx was blocked by the site's WAF; stdlib urllib works correctly.
-- **aggFilters API format**: ClinicalTrials.gov v2 API uses `aggFilters=phase:3,status:rec` not the old `filter.phase` / `filter.overallStatus` parameters.
-- **RAGAS removed**: ragas<0.2 conflicts with langchain>=0.3; ragas>=0.2 has a broken dependency on removed langchain_community.chat_models.vertexai. LLM-as-judge covers faithfulness evaluation instead.
+- The status filter code for NOT_YET_RECRUITING is `not-rec` in `ctgov_client._STATUS_MAP`. Unverified against the live API; confirm it before relying on the not-yet-recruiting filter.
+- Nothing here has been run against live Ollama or ClinicalTrials.gov from CI. Run `python main.py --smoke` after any config change.
+- After changing `eligibility_chars`, delete `chroma_db/`: cached trial text keeps the old length.
+- Intel Mac: torch<=2.2.2 and `numpy<2`; sentence-transformers pinned `>=2.2,<3.3`.
+- Gemini free tier: use gemini-2.5-flash (2.0 variants show limit:0 on some accounts). Groq retires models regularly; check `config/models.cloud.yaml`.
 
 ## Environment variables
 
-| Variable | Where to get it |
+| Variable | Purpose |
 |---|---|
-| `GROQ_API_KEY` | console.groq.com (free) |
-| `GEMINI_API_KEY` | aistudio.google.com (free) — use gemini-2.5-flash, not 2.0-flash (limit:0 on free tier) |
-
-## Known issues / compatibility
-
-- **PyTorch**: Intel Mac (x86_64) only supports torch<=2.2.2 via pip. Use `numpy<2` to avoid ABI crash.
-- **sentence-transformers**: pin to `>=2.2,<3.3` to stay compatible with torch 2.2.2.
-- **Gemini free tier**: gemini-2.0-flash and gemini-2.0-flash-lite show limit:0 on some accounts. Use gemini-2.5-flash instead.
-- **Groq model deprecations**: gemma2-9b-it and mixtral-8x7b-32768 are decommissioned. Use llama-3.1-8b-instant as secondary model.
-
-## CI / GitHub Actions secrets
-
-Add `GROQ_API_KEY` and `GEMINI_API_KEY` as repository secrets. Unit tests run without secrets; the `eval` job runs only on pushes to `main`.
+| `OLLAMA_BASE_URL` | Ollama endpoint (default http://localhost:11434) |
+| `MODELS_CONFIG` | alternate models YAML |
+| `GROQ_API_KEY`, `GEMINI_API_KEY` | only for config/models.cloud.yaml |
+| `CTGOV_CACHE_MODE`, `CTGOV_CACHE_DIR` | off, readwrite, or readonly snapshot cache |
+| `PIPELINE_LOG_PATH` | JSONL per-node timing events |
+| `EVAL_DELAY_SECONDS` | pause between cases in `--eval` |

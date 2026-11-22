@@ -1,5 +1,7 @@
 .env
 chroma_db/
+ctgov_cache/
+logs/
 __pycache__/
 *.pyc
 *.pyo
@@ -9,3 +11,10 @@ __pycache__/
 dist/
 build/
 .DS_Store
+# generated eval datasets (the sample_*.jsonl files are tracked)
+evals/datasets/answer_queries.jsonl
+evals/datasets/tool_queries.jsonl
+evals/datasets/retrieval_queries.jsonl
+evals/datasets/seed_trials.json
+evals/datasets/manifest.json
+.venv/

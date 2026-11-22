@@ -1,7 +1,10 @@
-import time
+"""Quick evaluation harness for the CLI (`python main.py --eval`).
 
-from src.evaluation.judge import JudgeScores, run_judge
-from src.llm.providers import get_gemini_llm
+For large, resumable, logged runs use the Inspect tasks in evals/ instead.
+"""
+import os
+import time
+from typing import Optional
 
 DEFAULT_TEST_CASES = [
     {"question": "What phase 3 trials are recruiting for type 2 diabetes treatments?"},
@@ -10,53 +13,32 @@ DEFAULT_TEST_CASES = [
 ]
 
 
-def evaluate_response(
-    question: str,
-    answer: str,
-    contexts: list[str],
-) -> dict:
-    gemini_llm = get_gemini_llm()
-    context_str = "\n\n---\n\n".join(contexts)
-
-    judge: JudgeScores = run_judge(question, answer, context_str, gemini_llm)
-    scores = {
-        "faithfulness_judge": judge.faithfulness,
-        "citation_accuracy": judge.citation_accuracy,
-        "faithfulness_reasoning": judge.faithfulness_reasoning,
-        "citation_reasoning": judge.citation_reasoning,
-    }
-
-
-    return scores
-
-
-def run_evaluation_suite(test_cases: list[dict] = None) -> list[dict]:
-    from src.agent.graph import run_query
-
+def run_evaluation_suite(test_cases: Optional[list[dict]] = None, pipeline=None,
+                         delay_s: Optional[float] = None) -> list[dict]:
+    if pipeline is None:
+        from src.pipeline import get_default_pipeline
+        pipeline = get_default_pipeline()
     if test_cases is None:
         test_cases = DEFAULT_TEST_CASES
+    if delay_s is None:
+        delay_s = float(os.environ.get("EVAL_DELAY_SECONDS", "0"))
 
     results = []
-    for case in test_cases:
+    for index, case in enumerate(test_cases):
         question = case["question"]
         print(f"Evaluating: {question}")
-
-        state = run_query(question)
-        eval_scores = evaluate_response(
-            question=question,
-            answer=state["aggregated_answer"],
-            contexts=state["relevant_chunks"],
-        )
-
+        result = pipeline.ask(question)
+        scores = pipeline.judge(question, result["answer"], result["context_chunks"])
         results.append({
             "question": question,
-            "answer": state["aggregated_answer"],
-            "confidence": state["confidence_score"],
-            "citations": state["citations"],
-            "eval_scores": eval_scores,
+            "answer": result["answer"],
+            "confidence": result["confidence"],
+            "citations": result["citations"],
+            "verified_citations": result["verified_citations"],
+            "unverified_citations": result["unverified_citations"],
+            "total_latency_s": result["total_latency_s"],
+            "eval_scores": scores,
         })
-
-        if case is not test_cases[-1]:
-            time.sleep(20)
-
+        if delay_s and index < len(test_cases) - 1:
+            time.sleep(delay_s)
     return results

@@ -1,0 +1,58 @@
+# Cluster profile: larger models, longer context, more retrieved text.
+# Select it with:  python main.py --config config/models.cluster.yaml ...
+#             or:  export MODELS_CONFIG=config/models.cluster.yaml
+#
+# Set your real Ollama tags with environment variables (check `ollama list` on the cluster):
+#   export NEMOTRON_MODEL=<tag>     # synthesizer, planner, evidence
+#   export DEEPSEEK_MODEL=<tag>     # synthesizer, R1-style reasoning model
+#   export CRITIC_MODEL=<tag>       # critic and judge, a different family from the synthesizers
+# The defaults below are placeholders. If a tag is not installed, `python main.py --smoke`
+# fails with "not installed" on the first run, which is the intended loud failure.
+#
+# Delete chroma_db/ the first time you use this profile (cached text keeps the old length).
+
+embedding:
+  model: sentence-transformers/all-MiniLM-L6-v2
+  device: cpu                     # use cuda if the cluster node has a GPU free for it
+
+defaults:
+  provider: ollama
+  base_url: ${OLLAMA_BASE_URL:-http://localhost:11434}
+  temperature: 0.0
+  timeout_s: 600                  # larger models are slower; avoids spurious timeouts on large runs
+  num_ctx: 8192                   # raise to 16384 if you raise max_context_chars; Ollama silently truncates
+
+models:
+  nemotron:
+    model: ${NEMOTRON_MODEL:-SET_NEMOTRON_MODEL}
+    tool_calling: json            # try native only after the json planner passes the tool_selection eval
+  deepseek:
+    model: ${DEEPSEEK_MODEL:-SET_DEEPSEEK_MODEL}
+    strip_think: true
+    tool_calling: json
+  critic:
+    model: ${CRITIC_MODEL:-SET_CRITIC_MODEL}
+    tool_calling: json
+
+roles:
+  planner: nemotron
+  synthesizers: [nemotron, deepseek]
+  evidence: nemotron
+  critic: critic
+  judge: critic
+
+fallback: [nemotron, deepseek]
+
+pipeline:
+  max_reformulations: 2
+  relevance_threshold: 0.4
+  retrieval_k: 5
+  fetch_page_size: 25
+  fetch_max_results: 50
+  eligibility_chars: 1500
+  max_context_chars: 12000
+  max_revisions: 1
+  critique_mode: full
+  nct_routing_override: true
+  llm_retries: 2
+  retry_backoff_s: 2.0

@@ -1,0 +1,57 @@
+# Active model configuration (local Ollama).
+# Override the file with:  MODELS_CONFIG=/path/to/other.yaml
+# ${VAR:-default} is expanded from the environment before parsing.
+#
+# Providers: ollama | openai_compatible | groq | gemini
+# Change models by editing this file only. No code changes needed.
+
+embedding:
+  model: sentence-transformers/all-MiniLM-L6-v2
+  device: cpu
+
+# Applied to every entry under `models`, overridable per model.
+defaults:
+  provider: ollama
+  base_url: ${OLLAMA_BASE_URL:-http://localhost:11434}
+  temperature: 0.0
+  timeout_s: 180
+  num_ctx: 4096        # LAPTOP TEST: nemotron-mini is a 4K-context model. Cluster models: use 8192 or more.
+                       # Ollama's default context is small and silently truncates long prompts
+
+# LAPTOP TEST models (16 GB Mac). On the cluster, swap the tags, e.g. a larger nemotron
+# and deepseek-r1:14b, and raise num_ctx and the pipeline limits below.
+models:
+  nemotron:
+    model: nemotron-mini:4b
+    tool_calling: json            # json = prompted JSON routing (works everywhere); native = Ollama tools API
+  deepseek:
+    model: deepseek-r1:1.5b
+    strip_think: true             # R1-style models emit <think>...</think>; removed before use
+    tool_calling: json
+  llama:
+    model: llama3.1:8b            # critic and judge: a different family from the synthesizers
+    tool_calling: json
+
+roles:
+  planner: nemotron               # tool selection, query reformulation
+  synthesizers: [nemotron, deepseek]   # 1 or more; agreement is scored across them
+  evidence: nemotron              # claim extraction for evidence mapping
+  critic: llama                   # keep different from the primary synthesizer when you can
+  judge: llama                    # LLM-as-a-judge for evaluation
+
+# Tried in order when a model fails after its retries (a model is never its own fallback).
+fallback: [nemotron, deepseek]
+
+pipeline:
+  max_reformulations: 2
+  relevance_threshold: 0.4
+  retrieval_k: 3                  # cluster: 5
+  fetch_page_size: 25
+  fetch_max_results: 50
+  eligibility_chars: 600          # cluster: 1500. Delete chroma_db/ after changing this (cached text keeps old length)
+  max_context_chars: 5000         # cluster: 12000
+  max_revisions: 1
+  critique_mode: full             # full | code_only | off
+  nct_routing_override: true      # if the question names NCT IDs the plan must use them
+  llm_retries: 2
+  retry_backoff_s: 2.0

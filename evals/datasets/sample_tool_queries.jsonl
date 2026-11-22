@@ -1,0 +1,8 @@
+{"id": "t1", "input": "What phase 3 trials are recruiting for type 2 diabetes?", "target": "search_trials"}
+{"id": "t2", "input": "Which trials study pembrolizumab for melanoma?", "target": "search_trials"}
+{"id": "t3", "input": "Summarize trial NCT04280705.", "target": "get_trial"}
+{"id": "t4", "input": "Tell me about NCT03456789.", "target": "get_trial"}
+{"id": "t5", "input": "What are the inclusion and exclusion criteria for NCT04280705?", "target": "get_eligibility"}
+{"id": "t6", "input": "Who can enroll in NCT03456789?", "target": "get_eligibility"}
+{"id": "t7", "input": "Compare NCT04280705 and NCT03456789.", "target": "compare_trials"}
+{"id": "t8", "input": "How do NCT04280705 and NCT02345678 differ in design?", "target": "compare_trials"}

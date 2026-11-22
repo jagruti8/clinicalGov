@@ -1,14 +1,18 @@
 from langchain_core.prompts import ChatPromptTemplate
 
-QUERY_CONSTRUCTOR_PROMPT = ChatPromptTemplate.from_messages([
+TOOL_ROUTER_PROMPT = ChatPromptTemplate.from_messages([
     ("system", (
-        "Extract structured search parameters from the user's clinical trial question. "
-        "Return ONLY valid JSON with these fields (null if not mentioned):\n"
-        '- condition: disease or medical condition\n'
-        '- intervention: drug, treatment, or procedure\n'
-        '- phase: one of PHASE1, PHASE2, PHASE3, PHASE4\n'
-        '- status: one of RECRUITING, COMPLETED, NOT_YET_RECRUITING\n\n'
-        'Example: {{"condition": "type 2 diabetes", "intervention": "metformin", "phase": null, "status": "RECRUITING"}}'
+        "You route questions about clinical trials to tools. Pick the tool(s) that fetch the "
+        "data needed to answer. Return ONLY valid JSON, no prose:\n"
+        '{{"tool_calls": [{{"name": "<tool>", "args": {{...}}}}]}}\n\n'
+        "Tools:\n{tools}\n\n"
+        "Rules:\n"
+        "- Use get_trial, get_eligibility, or compare_trials only when the question names NCT IDs.\n"
+        "- Otherwise use search_trials. Omit args you do not need. Use at most 3 calls.\n"
+        "- phase is one of PHASE1, PHASE2, PHASE3, PHASE4. "
+        "status is one of RECRUITING, COMPLETED, NOT_YET_RECRUITING.\n\n"
+        'Example: {{"tool_calls": [{{"name": "search_trials", "args": '
+        '{{"condition": "type 2 diabetes", "phase": "PHASE3", "status": "RECRUITING"}}}}]}}'
     )),
     ("human", "{question}"),
 ])
@@ -39,12 +43,46 @@ SYNTHESIS_PROMPT = ChatPromptTemplate.from_messages([
         "5. Do NOT infer or assume relationships between drugs beyond what is explicitly stated — "
         "if a trial compares drug A vs drug B, do not describe it as combining them\n"
         "6. Use the exact wording from the trial description when describing what a trial studies\n"
-        "7. Do not generalise across trials — describe each trial individually and accurately\n\n"
+        "7. Do not generalise across trials — describe each trial individually and accurately\n"
+        "8. Cite ONLY NCT IDs that appear in the provided trial data\n\n"
         "Think step by step: first identify which trials are relevant to the question, "
         "then reason through what each relevant trial says, "
         "then synthesize a cited answer."
     )),
-    ("human", "Question: {question}\n\nClinical Trial Data:\n{context}\n\nAnswer:"),
+    ("human", "Question: {question}\n\nClinical Trial Data:\n{context}\n{feedback}\nAnswer:"),
+])
+
+REVISION_FEEDBACK = (
+    "\nA reviewer found problems with your previous answer. Fix every one of them, "
+    "and remove anything the trial data does not support:\n{issues}\n"
+)
+
+EVIDENCE_PROMPT = ChatPromptTemplate.from_messages([
+    ("system", (
+        "List every factual claim in the ANSWER that is attributed to a trial. "
+        "Return ONLY valid JSON:\n"
+        '{{"claims": [{{"claim": "<short claim>", "nct_id": "<NCT id>", '
+        '"quote": "<exact words copied from that trial\'s data, at most 25 words>"}}]}}\n'
+        "The quote must be copied verbatim from the trial data, not paraphrased."
+    )),
+    ("human", "Trial data:\n{context}\n\nANSWER:\n{answer}\n\nJSON:"),
+])
+
+CRITIQUE_PROMPT = ChatPromptTemplate.from_messages([
+    ("system", (
+        "You review answers about clinical trials against the trial data. Check for:\n"
+        "- claims the data does not support\n"
+        "- wrong phase, status, condition, or intervention relationships\n"
+        "- citations to NCT IDs that are not in the data\n"
+        "- failure to answer the question\n"
+        "Return ONLY valid JSON: "
+        '{{"verdict": "pass" or "revise", "issues": ["<specific problem>", ...]}}\n'
+        "Use pass with an empty issues list if the answer is correct and supported."
+    )),
+    ("human", (
+        "Question: {question}\n\nTrial data:\n{context}\n\nAnswer:\n{answer}\n\n"
+        "Problems already found by automatic checks:\n{code_issues}\n\nJSON:"
+    )),
 ])
 
 JUDGE_PROMPT = ChatPromptTemplate.from_messages([
@@ -56,5 +94,5 @@ JUDGE_PROMPT = ChatPromptTemplate.from_messages([
         '- faithfulness_reasoning: one-sentence explanation\n'
         '- citation_reasoning: one-sentence explanation'
     )),
-    ("human", "Context:\n{context}\n\nAnswer to evaluate:\n{answer}\n\nJSON evaluation:"),
+    ("human", "Question: {question}\n\nContext:\n{context}\n\nAnswer to evaluate:\n{answer}\n\nJSON evaluation:"),
 ])

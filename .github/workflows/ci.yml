@@ -2,9 +2,15 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_eval:
+        description: "Also run the quick evaluation suite with the cloud (Groq + Gemini) config"
+        type: boolean
+        default: false
 
 jobs:
   test:
@@ -18,15 +24,17 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-eval.txt
 
-      - name: Run unit tests
+      - name: Run unit tests (mocked, no API keys or Ollama needed)
         run: pytest tests/ -v --tb=short
 
+  # The default config uses local Ollama, which CI does not have, so the live evaluation
+  # is manual and uses the cloud config.
   eval:
     runs-on: ubuntu-latest
     needs: test
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && inputs.run_eval
     steps:
       - uses: actions/checkout@v4
 
@@ -40,6 +48,8 @@ jobs:
 
       - name: Run evaluation suite
         env:
+          MODELS_CONFIG: config/models.cloud.yaml
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          EVAL_DELAY_SECONDS: "20"
         run: python main.py --eval

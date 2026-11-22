@@ -1,124 +1,263 @@
-import json
-import re
-import time
+"""Retrieval agent nodes: tool planning, execution, retrieval, reformulation,
+multi-model synthesis, and agreement scoring.
 
-from langchain_core.output_parsers import StrOutputParser
+Every node is `fn(state, deps) -> dict` (a partial state update).
+"""
+from concurrent.futures import ThreadPoolExecutor
 
+from langchain_core.messages import HumanMessage, SystemMessage
+
+from src.agent.deps import Deps
+from src.agent.prompts import (
+    REFORMULATION_PROMPT, REVISION_FEEDBACK, SYNTHESIS_PROMPT, TOOL_ROUTER_PROMPT,
+)
 from src.agent.state import RAGState
-from src.agent.prompts import QUERY_CONSTRUCTOR_PROMPT, REFORMULATION_PROMPT, SYNTHESIS_PROMPT
-from src.retrieval.ctgov_client import build_query_params, fetch_trials
-from src.retrieval.vector_store import store_trials, retrieve_chunks
-from src.llm.aggregator import build_synthesis_chain, aggregate_responses
+from src.agent.tools import (
+    SearchTrialsArgs, calls_from_json, calls_from_native, execute_tool, find_nct_ids,
+    nct_fix_call, parse_json_loose, plan_covers_ids, tool_descriptions, tool_schemas,
+    validate_call,
+)
+from src.llm.aggregator import LOW_AGREEMENT, agreement_score, combine_responses
+from src.llm.fallback import AllModelsFailed
+from src.retrieval.ctgov_client import build_query_params, format_trial_text, trial_id_from_text
+from src.retrieval.vector_store import retrieve_documents, store_trials
 
-RELEVANCE_THRESHOLD = 0.4
-MAX_REFORMULATIONS = 2
-
-
-def _parse_json(raw: str, fallback: dict) -> dict:
-    cleaned = re.sub(r"```(?:json)?\n?", "", raw).strip().rstrip("`")
-    try:
-        return json.loads(cleaned)
-    except json.JSONDecodeError:
-        return fallback
-
-
-def query_constructor_node(state: RAGState, groq_llm) -> dict:
-    chain = QUERY_CONSTRUCTOR_PROMPT | groq_llm | StrOutputParser()
-    raw = chain.invoke({"question": state["question"]})
-    params = _parse_json(raw, {"condition": state["question"], "intervention": None, "phase": None, "status": None})
-    return {
-        "query_params": build_query_params(
-            condition=params.get("condition"),
-            intervention=params.get("intervention"),
-            phase=params.get("phase"),
-            status=params.get("status"),
-        )
-    }
+NATIVE_SYSTEM = (
+    "You answer questions about clinical trials by calling tools. Use get_trial, "
+    "get_eligibility, or compare_trials only when the question names NCT IDs; "
+    "otherwise call search_trials."
+)
 
 
-def retriever_node(state: RAGState, vector_store) -> dict:
-    try:
-        trials = fetch_trials(state["query_params"])
-    except Exception as exc:
-        print(f"[Warning] Trial fetch failed ({exc}), treating as no results.")
-        return {"retrieved_trials": [], "relevant_chunks": [], "chunk_scores": []}
-    if not trials:
-        return {"retrieved_trials": [], "relevant_chunks": [], "chunk_scores": []}
-
-    store_trials(trials, vector_store)
-    chunks, scores = retrieve_chunks(state["question"], vector_store)
-    return {"retrieved_trials": trials, "relevant_chunks": chunks, "chunk_scores": scores}
+def _with_model(state: RAGState, step: str, model: str) -> dict:
+    return {**(state.get("models_used") or {}), step: model}
 
 
-def relevance_checker_node(state: RAGState) -> dict:
-    scores = state.get("chunk_scores", [])
-    is_relevant = bool(scores) and max(scores) >= RELEVANCE_THRESHOLD
-    return {"is_relevant": is_relevant}
+def _plan_native(deps: Deps, planner: str, question: str) -> list[dict]:
+    llm = deps.registry.get_llm(planner).bind_tools(tool_schemas())
+    response = llm.invoke([SystemMessage(content=NATIVE_SYSTEM), HumanMessage(content=question)])
+    return calls_from_native(getattr(response, "tool_calls", []))
 
 
-def reformulator_node(state: RAGState, groq_llm) -> dict:
-    chain = REFORMULATION_PROMPT | groq_llm | StrOutputParser()
-    raw = chain.invoke({
-        "question": state["question"],
-        "query_params": json.dumps(state["query_params"]),
-        "reformulation_count": state["reformulation_count"],
-    })
-    params = _parse_json(raw, {"condition": state["question"], "intervention": None, "phase": None, "status": None})
-    return {
-        "query_params": build_query_params(
-            condition=params.get("condition"),
-            intervention=params.get("intervention"),
-            phase=params.get("phase"),
-            status=params.get("status"),
-        ),
-        "reformulation_count": state["reformulation_count"] + 1,
-    }
+def plan_tools_node(state: RAGState, deps: Deps) -> dict:
+    """Ask the planner model which tool(s) to call. `tool_calls_llm` keeps the model's
+    own valid calls untouched; `tool_plan` is what will run (after the NCT override)."""
+    question = state["question"]
+    settings = deps.config.pipeline
+    planner = deps.config.roles.planner
+    errors = list(state.get("errors") or [])
+    models_used = dict(state.get("models_used") or {})
 
-
-def _is_rate_limit(exc: Exception) -> bool:
-    msg = str(exc).lower()
-    return "429" in msg or "rate" in msg or "quota" in msg or "resource_exhausted" in msg
-
-
-def _call_llm_with_retry(chain, inputs: dict, label: str) -> str:
-    for wait in [0, 15, 30]:
+    calls: list[dict] = []
+    json_ok = False
+    if deps.registry.spec(planner).tool_calling == "native":
         try:
-            if wait:
-                time.sleep(wait)
-            return chain.invoke(inputs).content
+            calls = _plan_native(deps, planner, question)
+            json_ok = bool(calls)
+            models_used["planner"] = planner
         except Exception as exc:
-            if not _is_rate_limit(exc):
-                print(f"[Warning] {label} unavailable ({type(exc).__name__}), skipping.")
-                return ""
-            if wait == 30:
-                print(f"[Warning] {label} unavailable after retries, skipping.")
-            else:
-                print(f"[Warning] {label} rate-limited, retrying in {wait + 15}s...")
-    return ""
+            errors.append(f"native tool calling failed on {planner}: {type(exc).__name__}: {str(exc)[:150]}")
 
+    if not calls:
+        messages = TOOL_ROUTER_PROMPT.format_messages(question=question, tools=tool_descriptions())
+        try:
+            result = deps.registry.call(planner, messages)
+            calls, json_ok = calls_from_json(result.text)
+            models_used["planner"] = result.model
+        except AllModelsFailed as exc:
+            errors.append(f"tool planning failed: {exc}")
 
-def multi_llm_synthesizer_node(state: RAGState, groq_llm, gemma_llm, gemini_llm) -> dict:
-    context = "\n\n---\n\n".join(state.get("relevant_chunks", [])) or "No relevant clinical trial data found."
-    inputs = {"question": state["question"], "context": context}
+    plan = [dict(call, args=dict(call["args"])) for call in calls]
+    source = "llm" if plan else "default"
 
-    gemma_inputs = {"question": inputs["question"], "context": inputs["context"][:6000]}
+    nct_ids = find_nct_ids(question)
+    if settings.nct_routing_override and nct_ids and not plan_covers_ids(plan, nct_ids):
+        plan = [nct_fix_call(question, nct_ids)]
+        source += "+nct_fix"
 
-    groq_response = (SYNTHESIS_PROMPT | groq_llm).invoke(inputs).content
-    gemma_response = _call_llm_with_retry(SYNTHESIS_PROMPT | gemma_llm, gemma_inputs, "Llama-8B")
-    gemini_response = _call_llm_with_retry(SYNTHESIS_PROMPT | gemini_llm, inputs, "Gemini")
+    if not plan:
+        plan = [{"name": "search_trials", "args": {"term": question}}]
 
-    return {"groq_response": groq_response, "gemma_response": gemma_response, "gemini_response": gemini_response}
-
-
-def agreement_scorer_node(state: RAGState) -> dict:
-    aggregated, confidence = aggregate_responses(
-        state.get("groq_response", ""),
-        state.get("gemma_response", ""),
-        state.get("gemini_response", ""),
-    )
-    citations = list(dict.fromkeys(re.findall(r"\[?(NCT\d{8})\]?", aggregated)))
     return {
-        "aggregated_answer": aggregated,
+        "tool_calls_llm": calls,
+        "plan_source": source,
+        "plan_json_ok": json_ok,
+        "tool_plan": plan,
+        "errors": errors,
+        "models_used": models_used,
+    }
+
+
+def execute_tools_node(state: RAGState, deps: Deps) -> dict:
+    """Run the planned tool calls against the live API and merge the trials found."""
+    settings = deps.config.pipeline
+    errors = list(state.get("errors") or [])
+    merged: dict[str, dict] = {}
+    runs: list[dict] = []
+    query_params = {}
+
+    for call in state.get("tool_plan", []):
+        args = dict(call["args"])
+        if call["name"] == "search_trials":
+            args["max_results"] = min(args.get("max_results", 25), settings.fetch_max_results)
+        try:
+            trials = execute_tool(call["name"], args, deps.ctgov, page_size=settings.fetch_page_size)
+        except Exception as exc:
+            errors.append(f"tool {call['name']} failed: {type(exc).__name__}: {str(exc)[:150]}")
+            trials = []
+        runs.append({"name": call["name"], "args": args, "n_trials": len(trials)})
+        if call["name"] == "search_trials" and not query_params:
+            search = SearchTrialsArgs(**args)
+            query_params = build_query_params(
+                condition=search.condition, intervention=search.intervention,
+                phase=search.phase, status=search.status, term=search.term,
+            )
+        for trial in trials:
+            merged.setdefault(trial["nct_id"], trial)
+
+    return {
+        "retrieved_trials": list(merged.values()),
+        "tool_runs": runs,
+        "query_params": query_params,
+        "errors": errors,
+    }
+
+
+def retrieve_node(state: RAGState, deps: Deps) -> dict:
+    """Build the model context. Search results go through the vector store (semantic
+    ranking restricted to the trials just fetched). Lookups by NCT ID use the trials
+    directly: the question already named them, so there is nothing to rank."""
+    settings = deps.config.pipeline
+    trials = state.get("retrieved_trials", [])
+    empty = {"relevant_chunks": [], "chunk_scores": [], "context_nct_ids": []}
+    if not trials:
+        return empty
+
+    if state.get("intent") != "search":
+        chunks = [format_trial_text(t, settings.eligibility_chars) for t in trials]
+        return {"relevant_chunks": chunks, "chunk_scores": [1.0] * len(chunks),
+                "context_nct_ids": [t["nct_id"] for t in trials]}
+
+    errors = list(state.get("errors") or [])
+    try:
+        store_trials(trials, deps.vector_store, settings.eligibility_chars)
+        docs = retrieve_documents(
+            state["question"], deps.vector_store, k=settings.retrieval_k,
+            restrict_ids=[t["nct_id"] for t in trials], query_params=state.get("query_params"),
+        )
+    except Exception as exc:
+        errors.append(f"retrieval failed: {type(exc).__name__}: {str(exc)[:150]}")
+        return {**empty, "errors": errors}
+
+    return {
+        "relevant_chunks": [d["text"] for d in docs],
+        "chunk_scores": [d["score"] for d in docs],
+        "context_nct_ids": [d["nct_id"] or trial_id_from_text(d["text"]) or "" for d in docs],
+    }
+
+
+def relevance_check_node(state: RAGState, deps: Deps) -> dict:
+    if state.get("intent") != "search":
+        return {"is_relevant": bool(state.get("retrieved_trials"))}
+    scores = state.get("chunk_scores", [])
+    threshold = deps.config.pipeline.relevance_threshold
+    return {"is_relevant": bool(scores) and max(scores) >= threshold}
+
+
+def reformulate_node(state: RAGState, deps: Deps) -> dict:
+    """Weak retrieval: ask the planner for better search parameters and re-plan."""
+    settings = deps.config.pipeline
+    count = state.get("reformulation_count", 0)
+    errors = list(state.get("errors") or [])
+    params = None
+    try:
+        messages = REFORMULATION_PROMPT.format_messages(
+            question=state["question"],
+            query_params=str({k: v for k, v in (state.get("query_params") or {}).items() if k != "fields"}),
+            reformulation_count=count,
+        )
+        result = deps.registry.call(deps.config.roles.planner, messages)
+        params = parse_json_loose(result.text)
+    except AllModelsFailed as exc:
+        errors.append(f"reformulation failed: {exc}")
+
+    call = None
+    if params:
+        call = validate_call("search_trials", {
+            **{k: v for k, v in params.items() if k in {"condition", "intervention", "phase", "status"} and v},
+            "max_results": settings.fetch_max_results,
+        })
+        if call is None:  # an invalid phase/status should not discard the whole reformulation
+            call = validate_call("search_trials", {
+                **{k: v for k, v in params.items() if k in {"condition", "intervention"} and v},
+                "max_results": settings.fetch_max_results,
+            })
+    if call is None:
+        call = {"name": "search_trials", "args": {"term": state["question"], "max_results": settings.fetch_max_results}}
+
+    return {"tool_plan": [call], "reformulation_count": count + 1, "errors": errors}
+
+
+def route_after_relevance(state: RAGState, deps: Deps) -> str:
+    if state.get("is_relevant"):
+        return "synthesize"
+    if state.get("intent") != "search":
+        return "synthesize"
+    if state.get("reformulation_count", 0) >= deps.config.pipeline.max_reformulations:
+        return "synthesize"
+    return "reformulate"
+
+
+def synthesize_node(state: RAGState, deps: Deps) -> dict:
+    """Every configured synthesizer answers in parallel, each with retry and fallback."""
+    settings = deps.config.pipeline
+    context = "\n\n---\n\n".join(state.get("relevant_chunks", []))[:settings.max_context_chars]
+    context = context or "No relevant clinical trial data found."
+
+    critique = state.get("critique") or {}
+    issues = critique.get("issues", []) if critique.get("verdict") == "revise" and state.get("revision_count", 0) else []
+    feedback = REVISION_FEEDBACK.format(issues="\n".join(f"- {i}" for i in issues)) if issues else ""
+
+    names = deps.config.roles.synthesizers
+
+    def run(name: str):
+        messages = SYNTHESIS_PROMPT.format_messages(
+            question=state["question"], context=context, feedback=feedback)
+        try:
+            return name, deps.registry.call(name, messages), None
+        except AllModelsFailed as exc:
+            return name, None, str(exc)
+
+    with ThreadPoolExecutor(max_workers=len(names)) as pool:
+        outcomes = list(pool.map(run, names))
+
+    responses = {}
+    models_used = dict(state.get("models_used") or {})
+    errors = list(state.get("errors") or [])
+    for name, result, error in outcomes:
+        if result:
+            responses[name] = result.text
+            models_used[f"synthesizer:{name}"] = result.model
+        else:
+            errors.append(f"synthesizer {name} failed: {error}")
+
+    return {"responses": responses, "models_used": models_used, "errors": errors}
+
+
+def score_agreement_node(state: RAGState, deps: Deps) -> dict:
+    responses = state.get("responses", {})
+    ordered = {name: responses[name] for name in deps.config.roles.synthesizers if name in responses}
+    if not ordered:
+        return {"draft_answer": "", "aggregated_answer": "", "confidence_score": None, "agreement_models": 0}
+
+    draft = next(iter(ordered.values()))
+    confidence = agreement_score(list(ordered.values()), deps.embedder)
+    answer = draft
+    if confidence is not None and confidence < LOW_AGREEMENT:
+        answer = combine_responses(ordered, confidence)
+    return {
+        "draft_answer": draft,
+        "aggregated_answer": answer,
         "confidence_score": confidence,
-        "citations": citations,
+        "agreement_models": len(ordered),
     }

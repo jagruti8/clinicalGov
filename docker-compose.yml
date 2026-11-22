@@ -1,13 +1,29 @@
 version: "3.8"
 
+# Ollama runs on the host (or set OLLAMA_BASE_URL to the cluster endpoint in .env).
+x-app: &app
+  build: .
+  env_file: .env
+  environment:
+    OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  volumes:
+    - chroma_data:/app/chroma_db
+    - ctgov_cache:/app/ctgov_cache
+
 services:
-  app:
-    build: .
-    env_file: .env
-    volumes:
-      - chroma_data:/app/chroma_db
+  app:                      # CLI:  docker compose run --rm app "your question"
+    <<: *app
     stdin_open: true
     tty: true
 
+  api:                      # REST API on http://localhost:8000/docs
+    <<: *app
+    command: ["--serve", "--port", "8000"]
+    ports:
+      - "8000:8000"
+
 volumes:
   chroma_data:
+  ctgov_cache:

@@ -1,74 +1,83 @@
+"""LangGraph wiring.
+
+Agents (node groups):
+  orchestrator  start, route, finalize
+  retrieval     plan_tools, execute_tools, retrieve, relevance_check, reformulate,
+                synthesize, score_agreement
+  evidence      evidence
+  critique      critique  (may send the draft back to retrieval.synthesize)
+
+Modes: "full" (default), "retrieval_only" (stops before synthesis),
+       "plan_only" (stops after tool planning). The last two serve evaluation.
+"""
 from functools import partial
 
 from langgraph.graph import END, START, StateGraph
 
-from src.agent.nodes import (
-    MAX_REFORMULATIONS,
-    agreement_scorer_node,
-    multi_llm_synthesizer_node,
-    query_constructor_node,
-    reformulator_node,
-    relevance_checker_node,
-    retriever_node,
-)
+from src.agent import critique, evidence, nodes, orchestrator
+from src.agent.deps import Deps
 from src.agent.state import RAGState
-from src.llm.providers import get_gemini_llm, get_groq_llm, get_secondary_groq_llm
-from src.retrieval.vector_store import get_embeddings, get_vector_store
+from src.observability import timed
 
 
-def _route_after_relevance_check(state: RAGState) -> str:
-    if state.get("is_relevant"):
-        return "synthesize"
-    if state.get("reformulation_count", 0) >= MAX_REFORMULATIONS:
-        return "synthesize"
-    return "reformulate"
-
-
-def build_graph():
-    groq_llm = get_groq_llm()
-    gemma_llm = get_secondary_groq_llm()
-    gemini_llm = get_gemini_llm()
-    vector_store = get_vector_store(get_embeddings())
+def build_graph(deps: Deps, mode: str = "full"):
+    if mode not in {"full", "retrieval_only", "plan_only"}:
+        raise ValueError(f"Unknown graph mode: {mode}")
 
     graph = StateGraph(RAGState)
 
-    graph.add_node("query_constructor", partial(query_constructor_node, groq_llm=groq_llm))
-    graph.add_node("retriever", partial(retriever_node, vector_store=vector_store))
-    graph.add_node("relevance_checker", relevance_checker_node)
-    graph.add_node("reformulator", partial(reformulator_node, groq_llm=groq_llm))
-    graph.add_node("multi_llm_synthesizer", partial(multi_llm_synthesizer_node, groq_llm=groq_llm, gemma_llm=gemma_llm, gemini_llm=gemini_llm))
-    graph.add_node("agreement_scorer", agreement_scorer_node)
+    def add(name: str, label: str, fn):
+        graph.add_node(name, timed(label, partial(fn, deps=deps)))
 
-    graph.add_edge(START, "query_constructor")
-    graph.add_edge("query_constructor", "retriever")
-    graph.add_edge("retriever", "relevance_checker")
+    add("start", "orchestrator.start", orchestrator.start_node)
+    add("plan_tools", "retrieval.plan_tools", nodes.plan_tools_node)
+    add("route", "orchestrator.route", orchestrator.route_node)
+
+    graph.add_edge(START, "start")
+    graph.add_edge("start", "plan_tools")
+    graph.add_edge("plan_tools", "route")
+
+    if mode == "plan_only":
+        graph.add_edge("route", END)
+        return graph.compile()
+
+    add("execute_tools", "retrieval.execute_tools", nodes.execute_tools_node)
+    add("retrieve", "retrieval.retrieve", nodes.retrieve_node)
+    add("relevance_check", "retrieval.relevance_check", nodes.relevance_check_node)
+    add("reformulate", "retrieval.reformulate", nodes.reformulate_node)
+
+    graph.add_edge("route", "execute_tools")
+    graph.add_edge("execute_tools", "retrieve")
+    graph.add_edge("retrieve", "relevance_check")
+    graph.add_edge("reformulate", "execute_tools")
+
+    after_relevance = partial(nodes.route_after_relevance, deps=deps)
+    if mode == "retrieval_only":
+        graph.add_conditional_edges(
+            "relevance_check", after_relevance, {"synthesize": END, "reformulate": "reformulate"})
+        return graph.compile()
+
+    add("synthesize", "retrieval.synthesize", nodes.synthesize_node)
+    add("score_agreement", "retrieval.score_agreement", nodes.score_agreement_node)
+    add("evidence", "evidence.evidence", evidence.evidence_node)
+    add("critique", "critique.critique", critique.critique_node)
+    add("finalize", "orchestrator.finalize", orchestrator.finalize_node)
+
     graph.add_conditional_edges(
-        "relevance_checker",
-        _route_after_relevance_check,
-        {"synthesize": "multi_llm_synthesizer", "reformulate": "reformulator"},
-    )
-    graph.add_edge("reformulator", "retriever")
-    graph.add_edge("multi_llm_synthesizer", "agreement_scorer")
-    graph.add_edge("agreement_scorer", END)
+        "relevance_check", after_relevance, {"synthesize": "synthesize", "reformulate": "reformulate"})
+    graph.add_edge("synthesize", "score_agreement")
+    graph.add_edge("score_agreement", "evidence")
+    graph.add_edge("evidence", "critique")
+    graph.add_conditional_edges(
+        "critique", partial(critique.route_after_critique, deps=deps),
+        {"synthesize": "synthesize", "finalize": "finalize"})
+    graph.add_edge("finalize", END)
 
     return graph.compile()
 
 
 def run_query(question: str) -> RAGState:
-    graph = build_graph()
-    return graph.invoke(RAGState(
-        question=question,
-        query_params={},
-        retrieved_trials=[],
-        relevant_chunks=[],
-        chunk_scores=[],
-        is_relevant=False,
-        reformulation_count=0,
-        groq_response="",
-        gemma_response="",
-        gemini_response="",
-        aggregated_answer="",
-        confidence_score=0.0,
-        citations=[],
-        eval_scores=None,
-    ))
+    """Convenience entry point: runs one question through a shared default pipeline."""
+    from src.pipeline import get_default_pipeline
+
+    return get_default_pipeline().run_state(question)
